@@ -1,0 +1,166 @@
+{
+  "schema_version": "1.1",
+  "episodes": [
+    {
+      "episode_id": "EP-001",
+      "title": "이번 주의 계획",
+      "topic": "월요일 아침 출근",
+      "premise": "월요일 아침 출근",
+      "twist": "점심 맛있는 거",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-001-monday-commute",
+      "created_at": "2026-07-19T09:27:37+00:00",
+      "status": "draft",
+      "humor_engine_id": null,
+      "beat_signature": null,
+      "hook_mode": null
+    },
+    {
+      "episode_id": "EP-002",
+      "title": "미루기의 천재",
+      "topic": "할 일을 시작하려고 할 때마다 방 청소와 냉장고 정리만 하게 되는 일상",
+      "premise": "할 일을 시작하려고 할 때마다 방 청소와 냉장고 정리만 하게 되는 일상",
+      "twist": "집만 새집 됐네",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-002-procrastination-genius",
+      "created_at": "2026-07-19T10:44:12+00:00",
+      "status": "draft",
+      "humor_engine_id": null,
+      "beat_signature": null,
+      "hook_mode": null
+    },
+    {
+      "episode_id": "EP-003",
+      "title": "화해는 간식부터",
+      "topic": "싸우고 방을 나간 남친이 알고 보니 편의점에서 화해용 간식을 사러 간 이야기",
+      "premise": "싸우고 방을 나간 남친이 알고 보니 편의점에서 화해용 간식을 사러 간 이야기",
+      "twist": "말은 천천히 하고, 이거 먼저",
+      "characters": [
+        "bgoon",
+        "partner"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-003-convenience-store-apology",
+      "created_at": "2026-07-19T12:21:25+00:00",
+      "status": "draft",
+      "humor_engine_id": null,
+      "beat_signature": null,
+      "hook_mode": null
+    },
+    {
+      "episode_id": "EP-004",
+      "title": "10분만 쉬자",
+      "topic": "퇴근 후 잠깐 누웠다가 새벽까지 휴대폰을 보는 직장인",
+      "premise": "퇴근 후 잠깐 누웠다가 새벽까지 휴대폰을 보는 직장인",
+      "twist": "다행이다. 출근 전까지 10분 남았네.",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-004-five-more-minutes",
+      "created_at": "2026-07-19T22:39:13+00:00",
+      "status": "draft",
+      "humor_engine_id": null,
+      "beat_signature": null,
+      "hook_mode": null
+    },
+    {
+      "episode_id": "EP-005",
+      "title": "내일부터 진짜",
+      "topic": "다이어트 결심을 굳게 하지만 매번 실패하고 다시 시작하는 일상",
+      "premise": "다이어트 결심을 굳게 하지만 매번 실패하고 다시 시작하는 일상",
+      "twist": "내일부터 진짜다.",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-005-tomorrow-for-real",
+      "created_at": "2026-07-20T01:40:18+00:00",
+      "status": "draft",
+      "humor_engine_id": null,
+      "beat_signature": null,
+      "hook_mode": null
+    },
+    {
+      "episode_id": "EP-006",
+      "title": "사무실의 사계절",
+      "topic": "사무실 에어컨 온도 전쟁",
+      "premise": "사무실 에어컨 온도 전쟁",
+      "twist": "내 자리에 사계절 세팅 완료.",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-006-lunch-walk-loop",
+      "created_at": "2026-07-20T03:40:06+00:00",
+      "status": "draft",
+      "humor_engine_id": null,
+      "beat_signature": null,
+      "hook_mode": null
+    },
+    {
+      "episode_id": "EP-008",
+      "title": "우유만 사면 되는데",
+      "topic": "우유만 사러 갔다가 우유만 빼고 다 사는 직장인",
+      "premise": "우유만 사러 갔다가 우유만 빼고 다 사는 직장인",
+      "twist": "우유만 빼고 다 샀네.",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-008-milk-only",
+      "created_at": "2026-07-20T05:10:14+00:00",
+      "status": "draft",
+      "humor_engine_id": null,
+      "beat_signature": null,
+      "hook_mode": null
+    },
+    {
+      "episode_id": "EP-009",
+      "title": "AI 신입사원",
+      "topic": "AI에게 맡긴 초안, 검토가 더 오래 걸리는 직장인",
+      "premise": "AI에게 맡긴 초안, 검토가 더 오래 걸리는 직장인",
+      "twist": "내가 AI 사수였네.",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-009-ai-new-hire",
+      "created_at": "2026-07-21T00:53:02+00:00",
+      "status": "draft",
+      "humor_engine_id": "social_timing_or_role_reversal",
+      "beat_signature": "social_timing_or_role_reversal|ai-draft-review|become-ai-manager",
+      "hook_mode": "both"
+    },
+    {
+      "episode_id": "EP-010",
+      "title": "포인트 찾는 데 두 시간",
+      "topic": "저장공간을 비우다 찾은 오래된 소액 포인트",
+      "premise": "저장공간을 비우다 찾은 오래된 소액 포인트",
+      "twist": "두 시간 썼는데, 배송비가 더 크네.",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-010-points-two-hours",
+      "created_at": "2026-07-21T03:09:02+00:00",
+      "status": "draft",
+      "humor_engine_id": "magnitude_mismatch",
+      "beat_signature": "magnitude_mismatch|phone-storage-cleanup|tiny-points-versus-two-hours",
+      "hook_mode": "both"
+    },
+    {
+      "episode_id": "EP-011",
+      "title": "오후 2시, 회사가 멈췄다",
+      "topic": "점심 후 사무실 전체가 일하는 자세만 유지한 채 절전 모드에 빠지는 직장인",
+      "premise": "점심 후 사무실 전체가 일하는 자세만 유지한 채 절전 모드에 빠지는 직장인",
+      "twist": "우리... 켜져 있는 척만 했네.",
+      "characters": [
+        "bgoon"
+      ],
+      "path": "/Users/b./Documents/인스타툰/episodes/EP-011-office-sleep-mode",
+      "created_at": "2026-07-21T04:41:20+00:00",
+      "status": "draft",
+      "humor_engine_id": "collective_optimism_reality_collapse",
+      "beat_signature": "collective_optimism_reality_collapse|post-lunch-freeze|office-sleep-mode",
+      "hook_mode": "both"
+    }
+  ]
+}

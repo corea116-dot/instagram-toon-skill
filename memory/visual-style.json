@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "style_name": "primary-reference-led-editorial-cartoon",
+  "description": "Flat 2D editorial cartoon led by the selected visual references: strict teal, blue, green, mustard, ochre, brown, and off-white palette; sparse backgrounds; playful action with a quiet, slightly lonely undertone.",
+  "canvas": {
+    "width": 1080,
+    "height": 1350,
+    "color_mode": "RGB_or_RGBA"
+  },
+  "reference_policy": {
+    "primary_reference_images": [
+      "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.38.png",
+      "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.58.png",
+      "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.08.23.png"
+    ],
+    "secondary_reference_images": [
+      "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.45.png",
+      "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.08.40.png",
+      "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.08.57.png",
+      "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.25.27.png"
+    ],
+    "apply_primary_images_to_each_panel": true,
+    "priority_order": [
+      "strict_palette",
+      "very_sparse_background_and_props",
+      "playful_action_with_quiet_lonely_undertone"
+    ],
+    "use_only": [
+      "palette relationships",
+      "sparse composition and negative space",
+      "mood and visual energy",
+      "flat textured illustration qualities"
+    ],
+    "do_not_copy": [
+      "white cat or any reference character",
+      "reference scene, furniture, props, or pose",
+      "text, watermark, signature, logo, or handle"
+    ],
+    "conflict_resolution": "When character-reference traits conflict with the selected style, prioritize the selected style. Keep bgoon recognizable through role and action, but allow the style to control palette, shape language, and visual treatment."
+  },
+  "linework": {
+    "color": "#292724",
+    "weight": "consistent medium",
+    "quality": "Use softly irregular hand-drawn contours; do not copy any depicted character, text, signature, or watermark."
+  },
+  "paper_texture": "Subtle matte paper grain; keep flat color fields clean and mobile-readable.",
+  "palette": {
+    "mode": "strict",
+    "allowed_colors": {
+      "teal_blue": "#176A95",
+      "deep_blue": "#274A95",
+      "forest_green": "#16834A",
+      "mustard_yellow": "#F1CF36",
+      "warm_ochre": "#D9832D",
+      "earth_brown": "#875D45",
+      "off_white": "#F7F1E6",
+      "warm_skin": "#F1B7A2",
+      "ink": "#292724"
+    },
+    "rule": "Use these colors and restrained lighter or darker tints only. Do not introduce a dominant hue outside this family unless the user explicitly requests it."
+  },
+  "background": {
+    "density": "very_sparse",
+    "max_story_props": 2,
+    "rule": "Use one flat or nearly empty color field. Add only props essential to the beat; do not add decorative furnishings, patterns, or visual clutter."
+  },
+  "emotional_tone": "Playful, brisk physical comedy balanced with a quiet, slightly lonely undertone.",
+  "lighting": "flat, readable, and continuous across adjacent panels",
+  "composition": "mobile-first, one focal action, broad negative space for later speech bubbles, and no incidental detail competing with the subject",
+  "prohibited_in_generated_art": [
+    "letters",
+    "Hangul",
+    "numbers",
+    "captions",
+    "speech bubbles",
+    "interface text",
+    "watermarks",
+    "signatures",
+    "logos"
+  ],
+  "reference_images": [
+    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.38.png",
+    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.58.png",
+    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.08.23.png",
+    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.45.png",
+    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.08.40.png",
+    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.08.57.png",
+    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.25.27.png"
+  ]
+}

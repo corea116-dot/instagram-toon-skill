@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "hard_banned": [
+    {
+      "id": "sexual-minors",
+      "rule": "No sexualized depiction or dialogue involving minors.",
+      "patterns": ["(?:미성년자|아동|어린이).{0,20}(?:성관계|성적 행위|성적 대상|나체)"]
+    },
+    {
+      "id": "self-harm-encouragement",
+      "rule": "No encouragement, instruction, or romanticization of self-harm or suicide.",
+      "patterns": ["(?:자해|자살)(?:을|를)?\\s*(?:권한다|권해|추천한다|하는 법|방법을 알려)"]
+    },
+    {
+      "id": "hate-or-dehumanization",
+      "rule": "No slurs, dehumanization, or inferiority claims about a protected group.",
+      "patterns": ["(?:여성|남성|외국인|장애인|노인|특정 종교).{0,12}(?:박멸|열등한 종족|쓸모없다)"]
+    },
+    {
+      "id": "targeted-humiliation",
+      "rule": "No harassment, doxxing, or humiliating portrayal of an identifiable private person.",
+      "patterns": ["(?:실명|주소|전화번호).{0,16}(?:공개|유포|올린다)"]
+    },
+    {
+      "id": "dangerous-instructions",
+      "rule": "No actionable instructions for violence, illegal wrongdoing, or dangerous substance misuse.",
+      "patterns": ["(?:폭탄|마약).{0,16}(?:제조법|만드는 법|제조 방법)"]
+    }
+  ],
+  "review_required": [
+    {
+      "id": "health-and-mental-health",
+      "guidance": "Avoid diagnosis, treatment claims, trivialization, and using symptoms as a punch line.",
+      "patterns": ["(?:우울증|공황장애|정신질환).{0,16}(?:진단|치료|약을 끊)"]
+    },
+    {
+      "id": "workplace-power",
+      "guidance": "Avoid normalizing coercion, retaliation, bullying, or harassment.",
+      "patterns": ["(?:팀장|상사|회사).{0,16}(?:보복|협박|괴롭힘|성희롱|강요)"]
+    },
+    {
+      "id": "identity-and-appearance",
+      "guidance": "Do not make a body, disability, age, nationality, gender, religion, or economic status the object of ridicule.",
+      "patterns": ["(?:뚱뚱한 사람|장애인|외국인|노인).{0,16}(?:놀린다|웃음거리|비웃)"]
+    },
+    {
+      "id": "grief-trauma-and-disaster",
+      "guidance": "Use only with clear user intent, gentle framing, and no exploitative twist.",
+      "patterns": ["(?:장례식|사망|참사|재난|트라우마).{0,16}(?:반전|웃기|농담)"]
+    },
+    {
+      "id": "real-people-and-brands",
+      "guidance": "Avoid unverified claims, impersonation, logos, and endorsement implications.",
+      "patterns": ["(?:연예인|정치인|브랜드|기업).{0,16}(?:사칭|광고|추천|보증)"]
+    }
+  ],
+  "language_policy": {
+    "disallowed": [
+      {
+        "id": "profanity",
+        "description": "Profanity is not allowed in dialogue or captions.",
+        "patterns": ["씨발", "시발", "ㅆ발", "ㅅ발", "씨\\s*발", "시\\s*발", "개새끼", "병신", "좆같"]
+      },
+      {
+        "id": "obfuscation",
+        "description": "Initial-only, spaced, and other obfuscated profanity is not allowed.",
+        "patterns": ["ㅆ\\s*ㅂ", "ㅂ\\s*ㅅ", "ㅈ\\s*ㄷ", "ㅅ\\s*[ㅂb]", "ㅆ\\s*발", "시\\s*발"]
+      },
+      {
+        "id": "identity",
+        "description": "Slurs and identity-targeted derogatory labels are not allowed.",
+        "patterns": ["짱깨", "한남", "김치녀", "똥남아", "쪽바리"]
+      },
+      {
+        "id": "dehumanization",
+        "description": "Dehumanizing attacks on a group or identity are not allowed.",
+        "patterns": ["(?:집단|사람들|[가-힣]{2,})\\s*(?:은|는|이|가)?\\s*(?:벌레|바퀴벌레|짐승|해충)"]
+      }
+    ]
+  }
+}

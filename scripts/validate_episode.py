@@ -1,0 +1,264 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "pillow>=12.0",
+#     "pydantic>=2.12",
+#     "typer>=0.20",
+# ]
+# ///
+
+# ─── How to run ───
+# 1. Install uv (if not installed):
+#      curl -LsSf https://astral.sh/uv/install.sh | sh
+# 2. Run directly (no venv, no pip install needed):
+#      uv run scripts/validate_episode.py --episode-dir episodes/EP-001-title
+# 3. Or make executable and run:
+#      chmod +x scripts/validate_episode.py && ./scripts/validate_episode.py --episode-dir episodes/EP-001-title
+# ──────────────────
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated
+
+from PIL import Image, UnidentifiedImageError
+from pydantic import ValidationError
+import typer
+
+from delivery import delivery_paths
+from language_policy import (
+    hard_banned_issues,
+    language_policy_issues,
+    review_required_findings,
+)
+from episode_models import (
+    BriefModel,
+    CANVAS_HEIGHT,
+    CANVAS_WIDTH,
+    CompositionModel,
+    EpisodeScriptModel,
+    PromptManifestModel,
+)
+from instagram_link_validation import (
+    instagram_link_issues,
+    requires_instagram_link_analysis,
+)
+from qa_reporting import QaSupplemental, existing_agent_section, qa_report_text
+from rendering import write_text_atomic
+from story_module_validation import story_module_issues, story_module_summary
+from topic_research_validation import requires_topic_research, topic_research_issues
+
+
+DEFAULT_PANEL_COUNT = 6
+
+
+def _panel_count(episode_dir: Path) -> int:
+    path = episode_dir / "script.json"
+    if not path.is_file():
+        return DEFAULT_PANEL_COUNT
+    try:
+        script = EpisodeScriptModel.model_validate_json(
+            path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValidationError):
+        return DEFAULT_PANEL_COUNT
+    return len(script.panels)
+
+
+def _required_paths(
+    episode_dir: Path,
+    panel_count: int,
+    requires_topic_research: bool,
+    requires_instagram_link_analysis: bool,
+) -> tuple[Path, ...]:
+    delivery = delivery_paths(episode_dir, panel_count)
+    paths = [
+        episode_dir / "brief.json",
+        episode_dir / "script.json",
+        episode_dir / "caption.txt",
+    ]
+    if requires_topic_research:
+        paths.append(episode_dir / "topic-research.json")
+    if requires_instagram_link_analysis:
+        paths.append(episode_dir / "instagram-source.json")
+    paths.extend(
+        episode_dir / "prompts" / f"panel-{number}.json"
+        for number in range(1, panel_count + 1)
+    )
+    paths.extend(
+        episode_dir / "raw" / f"panel-{number}.png"
+        for number in range(1, panel_count + 1)
+    )
+    paths.append(episode_dir / "final" / "composition.json")
+    paths.extend(delivery.rendered_panels)
+    paths.extend(delivery.final_images)
+    return tuple(paths)
+
+
+def _check_models(episode_dir: Path) -> tuple[str, ...]:
+    issues: list[str] = []
+    models = (
+        (episode_dir / "brief.json", BriefModel),
+        (episode_dir / "script.json", EpisodeScriptModel),
+    )
+    for path, model in models:
+        if not path.is_file():
+            continue
+        try:
+            _ = model.model_validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValidationError) as error:
+            issues.append(f"invalid structured file {path}: {error}")
+    caption = episode_dir / "caption.txt"
+    if caption.is_file() and not caption.read_text(encoding="utf-8").strip():
+        issues.append(f"empty caption: {caption}")
+    return tuple(issues)
+
+
+def _image_issue(path: Path, exact_size: bool) -> str | None:
+    try:
+        with Image.open(path) as image:
+            _ = image.load()
+            size = image.size
+            image_format = image.format
+    except (OSError, UnidentifiedImageError) as error:
+        return f"invalid PNG {path}: {error}"
+    if image_format != "PNG":
+        return f"expected PNG format at {path}, got {image_format}"
+    if exact_size and size != (CANVAS_WIDTH, CANVAS_HEIGHT):
+        return f"expected 1080x1350 at {path}, got {size[0]}x{size[1]}"
+    if not exact_size and (size[0] < 1024 or size[1] < 1024):
+        return f"raw panel is below 1024px at {path}: {size[0]}x{size[1]}"
+    return None
+
+
+def _check_images(episode_dir: Path, panel_count: int) -> tuple[str, ...]:
+    issues: list[str] = []
+    raw_paths = tuple(
+        episode_dir / "raw" / f"panel-{number}.png"
+        for number in range(1, panel_count + 1)
+    )
+    paths = delivery_paths(episode_dir, panel_count)
+    final_paths = paths.rendered_panels + paths.final_images
+    for path in raw_paths:
+        if path.is_file() and (issue := _image_issue(path, exact_size=True)):
+            issues.append(issue)
+    for path in final_paths:
+        if path.is_file() and (issue := _image_issue(path, exact_size=True)):
+            issues.append(issue)
+    return tuple(issues)
+
+
+def _check_prompts(episode_dir: Path, panel_count: int) -> tuple[str, ...]:
+    issues: list[str] = []
+    for number in range(1, panel_count + 1):
+        path = episode_dir / "prompts" / f"panel-{number}.json"
+        if not path.is_file():
+            continue
+        try:
+            prompt = PromptManifestModel.model_validate_json(
+                path.read_text(encoding="utf-8")
+            )
+        except (OSError, ValidationError) as error:
+            issues.append(f"invalid prompt manifest {path}: {error}")
+            continue
+        if prompt.panel != number:
+            issues.append(
+                f"prompt panel mismatch at {path}: expected {number}, got {prompt.panel}"
+            )
+        if prompt.size != (CANVAS_WIDTH, CANVAS_HEIGHT):
+            issues.append(f"prompt size mismatch at {path}: {prompt.size}")
+        if not prompt.negative_prompt.strip():
+            issues.append(f"negative prompt is empty at {path}")
+    return tuple(issues)
+
+
+def _check_layout(episode_dir: Path) -> tuple[str, ...]:
+    path = episode_dir / "final" / "composition.json"
+    if not path.is_file():
+        return ()
+    try:
+        manifest = CompositionModel.model_validate_json(
+            path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValidationError) as error:
+        return (f"invalid composition manifest {path}: {error}",)
+    issues: list[str] = []
+    if manifest.canvas != (CANVAS_WIDTH, CANVAS_HEIGHT):
+        issues.append(f"composition canvas mismatch: {manifest.canvas}")
+    for layout in manifest.layouts:
+        box = layout.box
+        safe = layout.safe_area
+        inside_safe = (
+            safe.x <= box.x
+            and safe.y <= box.y
+            and box.x + box.width <= safe.x + safe.width
+            and box.y + box.height <= safe.y + safe.height
+        )
+        if not inside_safe:
+            issues.append(
+                f"panel {layout.panel} bubble {layout.bubble} exceeds its safe area"
+            )
+    return tuple(issues)
+
+
+def validate_episode(episode_dir: Path) -> tuple[Path, tuple[str, ...]]:
+    panel_count = _panel_count(episode_dir)
+    needs_topic_research = requires_topic_research(episode_dir)
+    needs_instagram_link_analysis = requires_instagram_link_analysis(episode_dir)
+    missing = tuple(
+        f"missing required file: {path}"
+        for path in _required_paths(
+            episode_dir,
+            panel_count,
+            needs_topic_research,
+            needs_instagram_link_analysis,
+        )
+        if not path.is_file()
+    )
+    issues = (
+        missing
+        + _check_models(episode_dir)
+        + hard_banned_issues(episode_dir)
+        + language_policy_issues(episode_dir)
+        + topic_research_issues(episode_dir)
+        + instagram_link_issues(episode_dir)
+        + story_module_issues(episode_dir)
+        + _check_prompts(episode_dir, panel_count)
+        + _check_images(episode_dir, panel_count)
+        + _check_layout(episode_dir)
+    )
+    advisory_findings = review_required_findings(episode_dir)
+    report_path = episode_dir / "qa-report.md"
+    write_text_atomic(
+        report_path,
+        qa_report_text(
+            issues,
+            existing_agent_section(report_path),
+            QaSupplemental(
+                advisory_findings=advisory_findings,
+                story_modules=story_module_summary(episode_dir),
+            ),
+        ),
+    )
+    return report_path, issues
+
+
+def main(
+    episode_dir: Annotated[
+        Path,
+        typer.Option("--episode-dir", exists=True, file_okay=False, resolve_path=True),
+    ],
+) -> None:
+    report_path, issues = validate_episode(episode_dir)
+    if issues:
+        typer.echo(
+            "validation failed:\n" + "\n".join(f"- {issue}" for issue in issues),
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    typer.echo(f"validated episode: {report_path}")
+
+
+if __name__ == "__main__":
+    typer.run(main)

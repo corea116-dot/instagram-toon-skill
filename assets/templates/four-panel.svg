@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1080"
+     height="1350"
+     viewBox="0 0 1080 1350"
+     role="img"
+     aria-labelledby="template-title template-description">
+  <title id="template-title">Four-panel 1080 by 1350 layout template</title>
+  <desc id="template-description">Two-column, two-row panel slots with fixed gutters and hidden safe-area guides.</desc>
+  <defs>
+    <clipPath id="panel-1-clip"><rect x="36" y="30" width="492" height="621" rx="24"/></clipPath>
+    <clipPath id="panel-2-clip"><rect x="552" y="30" width="492" height="621" rx="24"/></clipPath>
+    <clipPath id="panel-3-clip"><rect x="36" y="699" width="492" height="621" rx="24"/></clipPath>
+    <clipPath id="panel-4-clip"><rect x="552" y="699" width="492" height="621" rx="24"/></clipPath>
+  </defs>
+
+  <rect id="canvas-background" width="1080" height="1350" fill="#FFF8ED"/>
+
+  <g id="panel-slots" fill="#EAE5DD" stroke="#3A302B" stroke-width="6">
+    <rect id="panel-1-slot" data-panel="1" x="36" y="30" width="492" height="621" rx="24" clip-path="url(#panel-1-clip)"/>
+    <rect id="panel-2-slot" data-panel="2" x="552" y="30" width="492" height="621" rx="24" clip-path="url(#panel-2-clip)"/>
+    <rect id="panel-3-slot" data-panel="3" x="36" y="699" width="492" height="621" rx="24" clip-path="url(#panel-3-clip)"/>
+    <rect id="panel-4-slot" data-panel="4" x="552" y="699" width="492" height="621" rx="24" clip-path="url(#panel-4-clip)"/>
+  </g>
+
+  <g id="safe-area-guides" data-export="exclude" fill="none" stroke="#E98D6C" stroke-width="2" stroke-dasharray="12 8" opacity="0">
+    <rect id="panel-1-safe-area" x="60" y="54" width="444" height="573" rx="16"/>
+    <rect id="panel-2-safe-area" x="576" y="54" width="444" height="573" rx="16"/>
+    <rect id="panel-3-safe-area" x="60" y="723" width="444" height="573" rx="16"/>
+    <rect id="panel-4-safe-area" x="576" y="723" width="444" height="573" rx="16"/>
+  </g>
+</svg>

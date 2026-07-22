@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1080"
+     height="1350"
+     viewBox="0 0 1080 1350"
+     role="img"
+     aria-labelledby="template-title template-description">
+  <title id="template-title">Single-panel carousel 1080 by 1350 layout template</title>
+  <desc id="template-description">Full-canvas artwork slot with a 54-pixel safe margin and hidden bubble guides.</desc>
+  <defs>
+    <clipPath id="artwork-clip"><rect width="1080" height="1350"/></clipPath>
+  </defs>
+
+  <rect id="canvas-background" width="1080" height="1350" fill="#FFF8ED"/>
+  <rect id="artwork-slot"
+        data-panel="current"
+        width="1080"
+        height="1350"
+        fill="#EAE5DD"
+        clip-path="url(#artwork-clip)"/>
+
+  <g id="layout-guides" data-export="exclude" fill="none" stroke="#E98D6C" stroke-width="2" stroke-dasharray="12 8" opacity="0">
+    <rect id="content-safe-area" x="54" y="54" width="972" height="1242" rx="24"/>
+    <rect id="top-bubble-safe-area" x="70" y="65" width="940" height="300" rx="24"/>
+    <rect id="bottom-bubble-safe-area" x="70" y="985" width="940" height="300" rx="24"/>
+  </g>
+</svg>

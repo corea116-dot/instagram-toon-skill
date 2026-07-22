@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "characters": [
+    {
+      "id": "bgoon",
+      "display_name": "bgoon",
+      "role": "일상의 작은 결심이 자주 흔들리는 사람",
+      "identity": {
+        "age_range": "late-20s-to-30s adult",
+        "face": "large simple rounded peach face, short thick black eyebrows, tiny dot eyes, small curved nose, and a full rounded black beard",
+        "hair": "short close-cropped black hair with a softly rounded silhouette",
+        "body": "simple rounded adult proportions with broad torso and short limbs"
+      },
+      "wardrobe": {
+        "default": "black knit top and black trousers",
+        "work": "black knit top and black trousers",
+        "colors": [
+          "#292724",
+          "#F1B7A2",
+          "#F7F1E6"
+        ]
+      },
+      "signature_props": [
+        "navy smartphone case"
+      ],
+      "voice": {
+        "register": "casual contemporary Korean",
+        "traits": [
+          "short self-talk",
+          "dry self-aware punch lines"
+        ],
+        "avoid": [
+          "formal exposition",
+          "demeaning labels"
+        ]
+      },
+      "reference_images": [
+        "assets/references/characters/bgoon/bgoon-authoritative-user-reference.jpg"
+      ]
+    }
+  ]
+}

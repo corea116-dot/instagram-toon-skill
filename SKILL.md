@@ -9,6 +9,24 @@ Act as the episode coordinator. Manage the complete workflow in the current Code
 
 **Maintenance:** When this skill's behavior or usage changes, update `/Users/b./Documents/인스타툰/INSTAGRAM-TOON-사용설명서.md` in the same change.
 
+
+## Prepare reference images before using the skill
+
+Before the first $instagram-toon call, add the visual references you want the episode to follow. Keep the folders themselves and place image files in these paths:
+
+- Character identity references: assets/references/characters/<character-name>/
+  - Use clear images that show the character's face, hair, body shape, usual clothes, colors, and recurring props.
+- Drawing-style references: assets/references/styles/<style-set-name>/
+  - Use images that show the desired line quality, palette, color temperature, background density, composition, and overall mood.
+  - Style references guide the visual treatment only. They do not replace the configured character identity.
+
+Then update the matching memory files with project-relative paths:
+
+- memory/character-bible.json: add character image paths to the character's reference_images.
+- memory/visual-style.json: add the style image paths to primary_reference_images when they must be attached to every panel.
+
+Use at least one character reference and one style reference before generating a real episode. Multiple carefully selected references improve continuity, but they should describe the same character and the same visual direction. The ArtDirectorAgent attaches every configured primary style reference to each new panel and targeted panel regeneration. If the references are missing or the memory paths are stale, the workflow can still run in mock mode, but character and style consistency cannot be guaranteed.
+
 ## Resolve the request
 
 Read the current request, conversation, project files, and memory before asking questions. Resolve `topic`, `audience`, `tone`, and `characters` in that order.

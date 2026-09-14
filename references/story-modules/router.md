@@ -6,11 +6,11 @@
 
 | ID | 담당 |
 | --- | --- |
-| `story-architecture` | 로그라인부터 6비트 인과 구조까지 정리 |
+| `story-architecture` | 로그라인부터 레이아웃 기반 인과 구조까지 정리 |
 | `continuity-canon` | 이번 화에 필요한 정전과 상태만 추출 |
 | `dialogue-persona` | 다화자 의도와 말투 충돌 정리 |
 | `branch-payoff-lab` | 실패한 인과·반전의 대안 비교 |
-| `storyboard-shot-plan` | 승인된 6비트를 촬영 가능한 콘티로 변환 |
+| `storyboard-shot-plan` | 승인된 레이아웃 비트를 촬영 가능한 콘티로 변환 |
 
 ## 라우팅 순서
 

@@ -19,23 +19,22 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import ValidationError
 import typer
-
+from composition_state import load_script, merge_layouts, require_complete_composition
 from delivery import (
-    clear_obsolete_six_panel_exports,
+    clear_obsolete_delivery_exports,
     delivery_paths,
     render_delivery,
 )
 from episode_models import (
-    BoxModel,
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
+    BoxModel,
     CompositionModel,
     ContinuityModel,
     EpisodeScriptModel,
@@ -43,6 +42,13 @@ from episode_models import (
     PanelModel,
     PromptManifestModel,
     RenderMode,
+)
+from pydantic import ValidationError
+from reference_policy import (
+    CharacterReferencePolicy,
+    load_character_policy,
+    resolve_reference_paths,
+    wardrobe_text_for_panel,
 )
 from rendering import (
     RenderError,
@@ -53,12 +59,14 @@ from rendering import (
     write_text_atomic,
 )
 
-
 NEGATIVE_PROMPT = (
-    "text, letters, numbers, captions, subtitles, speech bubbles, watermark, logo"
+    "text, letters, numbers, captions, subtitles, speech bubbles, watermark, logo, "
+    "different face shape, different beard shape, different hair, different body type, "
+    "different age or gender presentation"
 )
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 VISUAL_STYLE_PATH = SKILL_ROOT / "memory" / "visual-style.json"
+CHARACTER_BIBLE_PATH = SKILL_ROOT / "memory" / "character-bible.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,22 +76,20 @@ class ComposeOptions:
     panel: int | None
 
 
-def _load_script(episode_dir: Path) -> EpisodeScriptModel:
-    path = episode_dir / "script.json"
-    try:
-        return EpisodeScriptModel.model_validate_json(path.read_text(encoding="utf-8"))
-    except ValidationError as error:
-        raise RenderError(f"invalid structured file {path}: {error}") from error
-
-
-def _prompt_text(panel: PanelModel) -> str:
+def _prompt_text(
+    panel: PanelModel,
+    character_policy: CharacterReferencePolicy,
+    wardrobe_text: str,
+) -> str:
     props = ", ".join(panel.props) if panel.props else "none"
     section = panel.section or "legacy"
     return (
         f"Section: {section}. Narrative beat: {panel.beat}. Scene: {panel.scene}. "
         f"Expression: {panel.expression}. Action: {panel.action}. "
         f"Props: {props}. Background: {panel.background}. Camera: {panel.camera}. "
-        "Keep the established character and visual style consistent. Leave the declared speech-bubble safe areas uncluttered."
+        f"Character identity lock (must remain unchanged): {character_policy.identity_text} "
+        f"Wardrobe and footwear state: {wardrobe_text} "
+        "Character identity takes priority over style. Style may control only background, palette, texture, mood, and composition. Leave the declared speech-bubble safe areas uncluttered."
     )
 
 
@@ -96,7 +102,7 @@ def _revision_for(prompt_path: Path, partial: bool) -> int:
     return prompt.revision + 1
 
 
-def _primary_reference_images() -> tuple[str, str, str]:
+def _primary_reference_images() -> tuple[str, ...]:
     try:
         visual_style = json.loads(VISUAL_STYLE_PATH.read_text(encoding="utf-8"))
         references = visual_style["reference_policy"]["primary_reference_images"]
@@ -104,57 +110,35 @@ def _primary_reference_images() -> tuple[str, str, str]:
         raise RenderError(
             f"invalid primary style references at {VISUAL_STYLE_PATH}: {error}"
         ) from error
-    if not isinstance(references, list) or len(references) < 3:
+    if not isinstance(references, list) or not references:
         raise RenderError(
-            f"primary style references at {VISUAL_STYLE_PATH} must contain at least three paths"
+            f"primary style references at {VISUAL_STYLE_PATH} must contain at least one path"
         )
-    skill_root = SKILL_ROOT.resolve()
-    for index, reference in enumerate(references[:3], start=1):
-        if not isinstance(reference, str) or not reference:
-            raise RenderError(
-                f"primary style reference {index} at {VISUAL_STYLE_PATH} must be a nonempty path"
-            )
-        configured_path = Path(reference)
-        if configured_path.is_absolute():
-            raise RenderError(
-                f"primary style reference {reference!r} must be relative to {SKILL_ROOT}"
-            )
-        if any(part == ".." for part in configured_path.parts):
-            raise RenderError(
-                f"primary style reference {reference!r} must not contain path traversal"
-            )
-        try:
-            resolved_path = (SKILL_ROOT / configured_path).resolve()
-        except (OSError, RuntimeError) as error:
-            raise RenderError(
-                f"primary style reference {reference!r} could not be resolved: {error}"
-            ) from error
-        if not resolved_path.is_relative_to(skill_root):
-            raise RenderError(
-                f"primary style reference {reference!r} escapes skill root {SKILL_ROOT}"
-            )
-        if not resolved_path.is_file():
-            raise RenderError(
-                f"primary style reference {reference!r} is not a regular file under {SKILL_ROOT}"
-            )
-    first, second, third = references[:3]
-    return first, second, third
+    if not all(isinstance(reference, str) and reference for reference in references):
+        raise RenderError(
+            f"primary style references at {VISUAL_STYLE_PATH} must contain nonempty paths"
+        )
+    return resolve_reference_paths(
+        tuple(references), SKILL_ROOT, "primary style references"
+    )
 
 
 def _reference_images_for(
-    prompt_path: Path, primary_references: tuple[str, str, str], partial: bool
+    prompt_path: Path, canonical_references: tuple[str, ...], partial: bool
 ) -> tuple[str, ...]:
     if not partial or not prompt_path.is_file():
-        return primary_references
+        return canonical_references
     existing = PromptManifestModel.model_validate_json(
         prompt_path.read_text(encoding="utf-8")
     )
     extras = tuple(
         reference
         for reference in existing.reference_images
-        if reference not in primary_references
+        if reference not in canonical_references
+        and reference != "assets/references/styles"
+        and not reference.startswith(("assets/references/current/", "assets/references/styles/"))
     )
-    return primary_references + extras
+    return canonical_references + tuple(dict.fromkeys(extras))
 
 
 def _prompt_manifest(
@@ -163,11 +147,12 @@ def _prompt_manifest(
     mode: RenderMode,
     revision: int,
     reference_images: tuple[str, ...],
+    character_policy: CharacterReferencePolicy,
 ) -> PromptManifestModel:
     previous = script.panels[panel.panel - 2] if panel.panel > 1 else None
     continuity = ContinuityModel(
         previous_panel=previous.panel if previous else None,
-        locked_characters=(),
+        locked_characters=character_policy.character_ids,
         locked_props=previous.props if previous else (),
     )
     safe_areas = tuple(
@@ -180,7 +165,11 @@ def _prompt_manifest(
         revision=revision,
         mode=mode,
         size=(CANVAS_WIDTH, CANVAS_HEIGHT),
-        prompt=_prompt_text(panel),
+        prompt=_prompt_text(
+            panel,
+            character_policy,
+            wardrobe_text_for_panel(character_policy, panel.panel, script.panels),
+        ),
         negative_prompt=NEGATIVE_PROMPT,
         reference_images=reference_images,
         bubble_safe_areas=safe_areas,
@@ -188,44 +177,33 @@ def _prompt_manifest(
     )
 
 
-def _preflight_partial(episode_dir: Path, panel_count: int) -> None:
-    paths = delivery_paths(episode_dir, panel_count)
-    required = [episode_dir / "final" / "composition.json"]
-    required.extend(paths.rendered_panels + paths.final_images)
-    missing = tuple(str(path) for path in required if not path.is_file())
-    if missing:
-        raise RenderError(
-            "partial regeneration requires an existing full composition: "
-            + ", ".join(missing)
-        )
-
-
-def _merged_layouts(
-    episode_dir: Path, target: int | None, new_entries: tuple[LayoutEntryModel, ...]
-) -> tuple[LayoutEntryModel, ...]:
-    if target is None:
-        return tuple(sorted(new_entries, key=lambda item: (item.panel, item.bubble)))
-    path = episode_dir / "final" / "composition.json"
-    previous = CompositionModel.model_validate_json(path.read_text(encoding="utf-8"))
-    retained = tuple(item for item in previous.layouts if item.panel != target)
-    return tuple(
-        sorted(retained + new_entries, key=lambda item: (item.panel, item.bubble))
+def _preflight_partial(episode_dir: Path, script: EpisodeScriptModel) -> None:
+    paths = delivery_paths(
+        episode_dir, len(script.panels), script.output_layout
     )
+    require_complete_composition(episode_dir, script, paths.rendered_panels + paths.final_images)
 
 
 def compose(options: ComposeOptions) -> Path:
-    script = _load_script(options.episode_dir)
-    reference_images = _primary_reference_images()
+    script = load_script(options.episode_dir)
+    character_policy = load_character_policy(
+        options.episode_dir, CHARACTER_BIBLE_PATH, SKILL_ROOT
+    )
+    reference_images = tuple(
+        dict.fromkeys(character_policy.reference_images + _primary_reference_images())
+    )
     if options.panel is not None:
         if options.panel > len(script.panels):
             raise RenderError(
                 f"panel {options.panel} does not exist in this {len(script.panels)}-panel script"
             )
-        _preflight_partial(options.episode_dir, len(script.panels))
+        _preflight_partial(options.episode_dir, script)
     prompts_dir = options.episode_dir / "prompts"
     raw_dir = options.episode_dir / "raw"
     final_dir = options.episode_dir / "final"
-    paths = delivery_paths(options.episode_dir, len(script.panels))
+    paths = delivery_paths(
+        options.episode_dir, len(script.panels), script.output_layout
+    )
     rendered_dir = paths.rendered_panels[0].parent
     for path in (prompts_dir, raw_dir, rendered_dir, final_dir):
         path.mkdir(parents=True, exist_ok=True)
@@ -248,6 +226,7 @@ def compose(options: ComposeOptions) -> Path:
                 _reference_images_for(
                     prompt_path, reference_images, partial
                 ),
+                character_policy,
             )
             write_text_atomic(prompt_path, prompt.model_dump_json(indent=2) + "\n")
         raw_path = raw_dir / f"panel-{panel.panel}.png"
@@ -258,16 +237,24 @@ def compose(options: ComposeOptions) -> Path:
         carousel, panel_layouts = render_carousel(raw_path, panel, font_path)
         save_png_atomic(carousel, paths.rendered_panels[panel.panel - 1])
         layouts.extend(panel_layouts)
-    merged = _merged_layouts(options.episode_dir, options.panel, tuple(layouts))
+    merged = merge_layouts(options.episode_dir, options.panel, tuple(layouts))
     manifest = CompositionModel(
-        schema_version="1.0", canvas=(CANVAS_WIDTH, CANVAS_HEIGHT), layouts=merged
+        schema_version="1.1" if script.output_layout is not None else "1.0",
+        canvas=(CANVAS_WIDTH, CANVAS_HEIGHT),
+        layouts=merged,
+        output_layout=script.output_layout,
     )
     write_text_atomic(
         final_dir / "composition.json", manifest.model_dump_json(indent=2) + "\n"
     )
-    _ = render_delivery(options.episode_dir, len(script.panels), options.panel)
-    if len(script.panels) == 6 and options.panel is None:
-        clear_obsolete_six_panel_exports(options.episode_dir)
+    _ = render_delivery(
+        options.episode_dir,
+        len(script.panels),
+        script.output_layout,
+        options.panel,
+    )
+    if options.panel is None:
+        clear_obsolete_delivery_exports(options.episode_dir, paths)
     return final_dir
 
 
@@ -277,7 +264,7 @@ def main(
         typer.Option("--episode-dir", exists=True, file_okay=False, resolve_path=True),
     ],
     mock: Annotated[bool, typer.Option("--mock")] = False,
-    panel: Annotated[int | None, typer.Option("--panel", min=1, max=6)] = None,
+    panel: Annotated[int | None, typer.Option("--panel", min=1)] = None,
 ) -> None:
     try:
         result = compose(

@@ -16,7 +16,7 @@ Run only after the explicit one-link route passes. It may inspect one public dir
 
 ## StoryCriticAgent premise mode
 
-Run after IdeaAgent and before WriterAgent. Review all exactly three directions against these hard gates: human contradiction, explicit engine, specific hook promise, exactly four distinct visible development changes, payoff reversal, duplicate, and safety. Return passing direction IDs and classify each failure as `topic`, `mechanism`, `hook`, `beats`, `payoff`, `duplicate`, or `safety`; state `reroute_to` as `another_direction`, `idea_agent`, `next_editorial_candidate`, or `stop_for_user_input`. Numeric scores do not apply in premise mode.
+Run after IdeaAgent and before WriterAgent. Review all exactly three directions against these hard gates: human contradiction, explicit engine, specific hook promise, one or more distinct visible development changes, payoff reversal, duplicate, and safety. Confirm that WriterAgent can assign one change to every selected inner panel. Return passing direction IDs and classify each failure as `topic`, `mechanism`, `hook`, `beats`, `payoff`, `duplicate`, or `safety`; state `reroute_to` as `another_direction`, `idea_agent`, `next_editorial_candidate`, or `stop_for_user_input`. Numeric scores do not apply in premise mode.
 
 ```json
 {
@@ -76,7 +76,7 @@ Pass only when the total is 80 or higher and every hard gate passes. WriterAgent
 
 Run only after story QA passes and before art direction. This is a conservative Korean dialogue check, not a new drafting round. Check only translated or stiff phrasing, needless nominalization or hedging, dialogue that repeats visible information, character-voice mismatch, configured profanity, common obfuscations, and contextual indirect abuse. Preserve permitted blunt non-profane Korean rather than formalizing it.
 
-Preserve the story facts and comic mechanism, panel beat, speaker, bubble count, dialogue geometry, named entities, numbers, time expressions, quotations, intentional fragments, repetitions, pauses, laughter, and register. Do not add a fact, a new joke, a new bubble, or a line break. A change that would materially alter the opening hook or sixth-panel payoff requires story recheck instead of an automatic edit. Allow at most one automatic revision round.
+Preserve the story facts and comic mechanism, panel beat, speaker, bubble count, dialogue geometry, named entities, numbers, time expressions, quotations, intentional fragments, repetitions, pauses, laughter, and register. Do not add a fact, a new joke, a new bubble, or a line break. A change that would materially alter the opening hook or ending payoff requires story recheck instead of an automatic edit. Allow at most one automatic revision round.
 
 ```json
 {
@@ -93,7 +93,7 @@ Preserve the story facts and comic mechanism, panel beat, speaker, bubble count,
       "reason": "..."
     }
   ],
-  "protected_elements": ["opening hook", "sixth-panel timing"],
+  "protected_elements": ["opening hook", "ending timing"],
   "episode_change_rate": 0.0,
   "requires_story_recheck": false
 }
@@ -116,7 +116,7 @@ Check face, hair, outfit, palette, signature props, voice, background, time, lig
 
 ## VisualCriticAgent
 
-Inspect these ten dimensions:
+Inspect these ten dimensions in priority order:
 
 1. Character consistency
 2. Hands and prop anatomy
@@ -146,11 +146,11 @@ Return only observed problems; do not request a whole-episode rerender for a pan
 }
 ```
 
-Any generated lettering, identity drift, missing scripted action, malformed hand/prop, unsafe bubble placement, wrong output size, or primary-reference style failure is blocking. A primary-reference style failure includes a dominant unapproved hue, a busy background, more than two nonessential props, a copied reference subject/scene, or a missed playful-but-quiet mood. Regenerate that panel once automatically with the selected three primary references; if it still fails, mark `review_required` and stop automatic retries. Report informational polish separately and do not automatically regenerate for it.
+Any generated lettering, identity drift, missing scripted action, malformed hand/prop, unsafe bubble placement, wrong output size, or primary-reference style failure is blocking. Identity drift includes changed face, hair, beard, skin tone, body proportions, or expression grammar. A wardrobe or footwear change without a script `story_reason` is blocking continuity. A primary-reference style failure includes a dominant unapproved hue, a busy background, more than two nonessential props, a copied reference subject/scene, or a missed playful-but-quiet mood. Character identity and wardrobe continuity always outrank style: a style pass cannot rescue either failure. Regenerate that panel once with the resolved authoritative character references first and all current primary style references after them, deduplicating shared images; if it still fails, mark `review_required` and stop automatic retries. Report informational polish separately and do not automatically regenerate for it.
 
 ## Deterministic validation
 
-`validate_episode.py` must check required files, JSON readability, required schema versions including prompt and composition manifests, exactly six panels for new episodes, section and beat order, bubble count, raw/composed/final PNG readability, exact 1080x1350 dimensions for every raw provider image, internal composed panel, and final image, bubble boxes inside safe areas, and the three new delivery outputs: `opening.png`, `development-four-panel.png`, and `ending.png`. It may also validate exact four-panel legacy episodes for backward-compatible recomposition. It writes `qa-report.md`, prints that path on success, and exits nonzero with a clear error on failure.
+`validate_episode.py` must check required files, JSON readability, required schema versions including prompt and composition manifests, `output_layout` sum and per-page maximum of four, section and beat order, bubble count, raw/composed/final PNG readability, exact 1080x1350 dimensions for every raw provider image, internal composed panel, and final image, bubble boxes inside safe areas, and one sequential `page-NN.png` delivery output per selected group. It also validates 1.0 four- and six-panel episodes with their legacy exports. It writes `qa-report.md`, prints that path on success, and exits nonzero with a clear error on failure.
 
 Mock end-to-end QA must also prove:
 
@@ -162,4 +162,4 @@ Mock end-to-end QA must also prove:
 
 ## Story-quality 1.1 contract
 
-Before any topic score, fail candidates that lack source relevance, human observation, behavioral contradiction, a named humor engine, hook/payoff seed, safety clearance, or duplicate clearance; a high score cannot override ineligibility. A direct user topic skips scouting. Evaluate exactly three directions across at least two humor engines in two StoryCritic stages (premise, then script), with no more than two total rewrites. Review and report `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, exactly four `development_changes`, `payoff_reversal`, and `beat_signature`; the selected engine, signature, and hook must be explicit. The same beat signature or payoff is a hard duplicate. Reject profanity and obfuscation, but allow rough non-profane Korean when contextually natural.
+Before any topic score, fail candidates that lack source relevance, human observation, behavioral contradiction, a named humor engine, hook/payoff seed, safety clearance, or duplicate clearance; a high score cannot override ineligibility. A direct user topic skips scouting. Evaluate exactly three directions across at least two humor engines in two StoryCritic stages (premise, then script), with no more than two total rewrites. Review and report `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, one or more `development_changes`, `payoff_reversal`, and `beat_signature`; the selected engine, signature, and hook must be explicit. The same beat signature or payoff is a hard duplicate. Reject profanity and obfuscation, but allow rough non-profane Korean when contextually natural.

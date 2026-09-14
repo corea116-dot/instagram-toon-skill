@@ -20,24 +20,28 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from copy import deepcopy
+from pathlib import Path
 from typing import Literal, cast
 
 import pytest
 from pydantic import ValidationError
 
-
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from episode_models import BriefModel, RichDirectionModel  # noqa: E402
-from topic_research_models import RichTopicCandidateModel, TopicResearchModel  # noqa: E402
+from episode_models import BriefModel, RichDirectionModel
+from reference_policy import resolve_reference_paths
+from topic_research_models import (
+    RichTopicCandidateModel,
+    TopicResearchModel,
+)
+
 type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
 type TopicOrigin = Literal["user", "editorial_scout"]
@@ -371,20 +375,31 @@ def test_validation_skips_research_when_user_supplied_topic(tmp_path: Path) -> N
     assert validated.returncode == 0, validated.stderr
 
 
-def test_prompt_manifests_start_with_primary_style_references_on_full_and_targeted_compose(
+def test_prompt_manifests_start_with_character_references_on_full_and_targeted_compose(
     tmp_path: Path,
 ) -> None:
     episode = _make_episode(tmp_path, "user")
     composed = _run("compose_episode.py", "--episode-dir", str(episode), "--mock")
     assert composed.returncode == 0, composed.stderr
-    expected = [
-        "assets/references/styles/screenshots-2026-07-19/스크린샷 2026-07-19 오후 4.07.38.png",
-        "assets/references/styles/screenshots-2026-07-19/스크린샷 2026-07-19 오후 4.07.58.png",
-        "assets/references/styles/screenshots-2026-07-19/스크린샷 2026-07-19 오후 4.08.23.png",
-    ]
+    visual_style = json.loads(
+        (SKILL_ROOT / "memory" / "visual-style.json").read_text(encoding="utf-8")
+    )
+    style_references = resolve_reference_paths(
+        tuple(visual_style["reference_policy"]["primary_reference_images"]),
+        SKILL_ROOT,
+        "style references",
+    )
+    character_bible = json.loads(
+        (SKILL_ROOT / "memory" / "character-bible.json").read_text(encoding="utf-8")
+    )
+    expected = list(
+        dict.fromkeys(
+            [*resolve_reference_paths(tuple(character_bible["characters"][0]["reference_images"]), SKILL_ROOT, "character references"), *style_references]
+        )
+    )
     for number in range(1, 7):
         prompt = json.loads((episode / "prompts" / f"panel-{number}.json").read_text(encoding="utf-8"))
-        assert prompt["reference_images"][:3] == expected
+        assert prompt["reference_images"] == expected
     panel_path = episode / "prompts" / "panel-4.json"
     panel = json.loads(panel_path.read_text(encoding="utf-8"))
     panel["reference_images"].append("assets/references/characters/bgoon/bgoon-1.png")
@@ -400,15 +415,16 @@ def test_prompt_manifests_start_with_primary_style_references_on_full_and_target
     ]
 
 
-def test_prompt_manifests_use_only_first_three_configured_primary_references(
+def test_prompt_manifests_attach_shared_character_and_style_reference_once(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     import compose_episode
 
-    visual_style = json.loads((SKILL_ROOT / "memory" / "visual-style.json").read_text(encoding="utf-8"))
+    visual_style = json.loads(
+        (SKILL_ROOT / "memory" / "visual-style.json").read_text(encoding="utf-8")
+    )
     references = visual_style["reference_policy"]["primary_reference_images"]
     assert isinstance(references, list)
-    visual_style["reference_policy"]["primary_reference_images"] = references + [references[0]]
     configured_style = tmp_path / "visual-style.json"
     _write_json(configured_style, visual_style)
     monkeypatch.setattr(compose_episode, "VISUAL_STYLE_PATH", configured_style)
@@ -418,7 +434,15 @@ def test_prompt_manifests_use_only_first_three_configured_primary_references(
         compose_episode.ComposeOptions(episode_dir=episode, mock=True, panel=None)
     )
 
-    expected = references[:3]
+    character_bible = json.loads(
+        (SKILL_ROOT / "memory" / "character-bible.json").read_text(encoding="utf-8")
+    )
+    expected = list(
+        dict.fromkeys(
+            [*resolve_reference_paths(tuple(character_bible["characters"][0]["reference_images"]), SKILL_ROOT, "character references"), *resolve_reference_paths(tuple(references), SKILL_ROOT, "style references")]
+        )
+    )
+    assert expected
     prompt_path = episode / "prompts" / "panel-4.json"
     prompt = json.loads(prompt_path.read_text(encoding="utf-8"))
     assert prompt["reference_images"] == expected
@@ -475,6 +499,15 @@ def test_v11_story_quality_contract_requires_complete_directions_and_eligible_se
     }
     validated_brief = BriefModel.model_validate(brief)
     assert validated_brief.schema_version == "1.1"
+    layout_brief = deepcopy(brief)
+    layout_brief["output_layout"] = [2, 3]
+    layout_directions = cast(list[dict[str, object]], layout_brief["directions"])
+    for layout_direction in layout_directions:
+        layout_direction["development_changes"] = ["하나", "둘", "셋"]
+    assert BriefModel.model_validate(layout_brief).output_layout == (2, 3)
+    layout_directions[0]["development_changes"] = ["하나", "둘"]
+    with pytest.raises(ValidationError):
+        BriefModel.model_validate(layout_brief)
     for field in (
         "human_truth",
         "behavioral_contradiction",
@@ -493,7 +526,7 @@ def test_v11_story_quality_contract_requires_complete_directions_and_eligible_se
     invalid_brief = deepcopy(brief)
     directions = cast(list[dict[str, object]], invalid_brief["directions"])
     direction = directions[0]
-    direction["development_changes"] = ["하나", "둘", "셋"]
+    direction["development_changes"] = []
     with pytest.raises(ValidationError):
         BriefModel.model_validate(invalid_brief)
     for field in (

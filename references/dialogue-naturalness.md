@@ -16,7 +16,7 @@ Read the current brief and `script.json`, `references/story-rules.md`, `memory/d
 
 ## Preserve
 
-- Story facts, beat order, comic mechanism, opening hook, and sixth-panel payoff.
+- Story facts, beat order, comic mechanism, opening hook, and ending payoff.
 - Speaker, bubble count, and existing bubble safe-area geometry.
 - Named entities, numbers, time expressions, quotations, intentional fragments, repetitions, pauses, laughter, and register.
 - The existing visual brief: this review never requests Korean lettering inside generated art.
@@ -43,7 +43,7 @@ Return JSON only:
       "reason": "..."
     }
   ],
-  "protected_elements": ["opening hook", "sixth-panel timing"],
+  "protected_elements": ["opening hook", "ending timing"],
   "episode_change_rate": 0.0,
   "requires_story_recheck": false
 }

@@ -51,28 +51,29 @@ from topic_research_validation import requires_topic_research, topic_research_is
 
 
 DEFAULT_PANEL_COUNT = 6
+DEFAULT_OUTPUT_LAYOUT: tuple[int, ...] | None = None
+DeliveryConfig = tuple[int, tuple[int, ...] | None]
 
 
-def _panel_count(episode_dir: Path) -> int:
+def _delivery_config(episode_dir: Path) -> DeliveryConfig | None:
     path = episode_dir / "script.json"
     if not path.is_file():
-        return DEFAULT_PANEL_COUNT
+        return DEFAULT_PANEL_COUNT, DEFAULT_OUTPUT_LAYOUT
     try:
         script = EpisodeScriptModel.model_validate_json(
             path.read_text(encoding="utf-8")
         )
     except (OSError, ValidationError):
-        return DEFAULT_PANEL_COUNT
-    return len(script.panels)
+        return None
+    return len(script.panels), script.output_layout
 
 
 def _required_paths(
     episode_dir: Path,
-    panel_count: int,
+    delivery_config: DeliveryConfig | None,
     requires_topic_research: bool,
     requires_instagram_link_analysis: bool,
 ) -> tuple[Path, ...]:
-    delivery = delivery_paths(episode_dir, panel_count)
     paths = [
         episode_dir / "brief.json",
         episode_dir / "script.json",
@@ -82,17 +83,20 @@ def _required_paths(
         paths.append(episode_dir / "topic-research.json")
     if requires_instagram_link_analysis:
         paths.append(episode_dir / "instagram-source.json")
-    paths.extend(
-        episode_dir / "prompts" / f"panel-{number}.json"
-        for number in range(1, panel_count + 1)
-    )
-    paths.extend(
-        episode_dir / "raw" / f"panel-{number}.png"
-        for number in range(1, panel_count + 1)
-    )
-    paths.append(episode_dir / "final" / "composition.json")
-    paths.extend(delivery.rendered_panels)
-    paths.extend(delivery.final_images)
+    if delivery_config is not None:
+        panel_count, output_layout = delivery_config
+        delivery = delivery_paths(episode_dir, panel_count, output_layout)
+        paths.extend(
+            episode_dir / "prompts" / f"panel-{number}.json"
+            for number in range(1, panel_count + 1)
+        )
+        paths.extend(
+            episode_dir / "raw" / f"panel-{number}.png"
+            for number in range(1, panel_count + 1)
+        )
+        paths.append(episode_dir / "final" / "composition.json")
+        paths.extend(delivery.rendered_panels)
+        paths.extend(delivery.final_images)
     return tuple(paths)
 
 
@@ -115,6 +119,23 @@ def _check_models(episode_dir: Path) -> tuple[str, ...]:
     return tuple(issues)
 
 
+def _check_brief_script_layout(episode_dir: Path) -> tuple[str, ...]:
+    brief_path = episode_dir / "brief.json"
+    script_path = episode_dir / "script.json"
+    if not brief_path.is_file() or not script_path.is_file():
+        return ()
+    try:
+        brief = BriefModel.model_validate_json(brief_path.read_text(encoding="utf-8"))
+        script = EpisodeScriptModel.model_validate_json(
+            script_path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValidationError):
+        return ()
+    if brief.output_layout is not None and brief.output_layout != script.output_layout:
+        return ("brief output_layout does not match script output_layout",)
+    return ()
+
+
 def _image_issue(path: Path, exact_size: bool) -> str | None:
     try:
         with Image.open(path) as image:
@@ -132,13 +153,18 @@ def _image_issue(path: Path, exact_size: bool) -> str | None:
     return None
 
 
-def _check_images(episode_dir: Path, panel_count: int) -> tuple[str, ...]:
+def _check_images(
+    episode_dir: Path, delivery_config: DeliveryConfig | None
+) -> tuple[str, ...]:
+    if delivery_config is None:
+        return ()
+    panel_count, output_layout = delivery_config
     issues: list[str] = []
     raw_paths = tuple(
         episode_dir / "raw" / f"panel-{number}.png"
         for number in range(1, panel_count + 1)
     )
-    paths = delivery_paths(episode_dir, panel_count)
+    paths = delivery_paths(episode_dir, panel_count, output_layout)
     final_paths = paths.rendered_panels + paths.final_images
     for path in raw_paths:
         if path.is_file() and (issue := _image_issue(path, exact_size=True)):
@@ -149,7 +175,12 @@ def _check_images(episode_dir: Path, panel_count: int) -> tuple[str, ...]:
     return tuple(issues)
 
 
-def _check_prompts(episode_dir: Path, panel_count: int) -> tuple[str, ...]:
+def _check_prompts(
+    episode_dir: Path, delivery_config: DeliveryConfig | None
+) -> tuple[str, ...]:
+    if delivery_config is None:
+        return ()
+    panel_count, _ = delivery_config
     issues: list[str] = []
     for number in range(1, panel_count + 1):
         path = episode_dir / "prompts" / f"panel-{number}.json"
@@ -173,7 +204,12 @@ def _check_prompts(episode_dir: Path, panel_count: int) -> tuple[str, ...]:
     return tuple(issues)
 
 
-def _check_layout(episode_dir: Path) -> tuple[str, ...]:
+def _check_layout(
+    episode_dir: Path, delivery_config: DeliveryConfig | None
+) -> tuple[str, ...]:
+    if delivery_config is None:
+        return ()
+    _, output_layout = delivery_config
     path = episode_dir / "final" / "composition.json"
     if not path.is_file():
         return ()
@@ -186,6 +222,10 @@ def _check_layout(episode_dir: Path) -> tuple[str, ...]:
     issues: list[str] = []
     if manifest.canvas != (CANVAS_WIDTH, CANVAS_HEIGHT):
         issues.append(f"composition canvas mismatch: {manifest.canvas}")
+    if manifest.output_layout != output_layout:
+        issues.append(
+            "composition output_layout does not match script output_layout"
+        )
     for layout in manifest.layouts:
         box = layout.box
         safe = layout.safe_area
@@ -203,14 +243,14 @@ def _check_layout(episode_dir: Path) -> tuple[str, ...]:
 
 
 def validate_episode(episode_dir: Path) -> tuple[Path, tuple[str, ...]]:
-    panel_count = _panel_count(episode_dir)
+    delivery_config = _delivery_config(episode_dir)
     needs_topic_research = requires_topic_research(episode_dir)
     needs_instagram_link_analysis = requires_instagram_link_analysis(episode_dir)
     missing = tuple(
         f"missing required file: {path}"
         for path in _required_paths(
             episode_dir,
-            panel_count,
+            delivery_config,
             needs_topic_research,
             needs_instagram_link_analysis,
         )
@@ -219,14 +259,15 @@ def validate_episode(episode_dir: Path) -> tuple[Path, tuple[str, ...]]:
     issues = (
         missing
         + _check_models(episode_dir)
+        + _check_brief_script_layout(episode_dir)
         + hard_banned_issues(episode_dir)
         + language_policy_issues(episode_dir)
         + topic_research_issues(episode_dir)
         + instagram_link_issues(episode_dir)
         + story_module_issues(episode_dir)
-        + _check_prompts(episode_dir, panel_count)
-        + _check_images(episode_dir, panel_count)
-        + _check_layout(episode_dir)
+        + _check_prompts(episode_dir, delivery_config)
+        + _check_images(episode_dir, delivery_config)
+        + _check_layout(episode_dir, delivery_config)
     )
     advisory_findings = review_required_findings(episode_dir)
     report_path = episode_dir / "qa-report.md"

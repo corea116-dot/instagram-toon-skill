@@ -1,6 +1,6 @@
 # Storyboard Shot Plan
 
-StoryCritic과 DialogueNaturalnessAgent를 통과한 6비트를 ArtDirectorAgent가 그릴 수 있는 사건과 카메라 계획으로 바꾼다. 스토리를 다시 쓰거나 이미지를 직접 생성하지 않는다.
+StoryCritic과 DialogueNaturalnessAgent를 통과한 레이아웃 기반 비트를 ArtDirectorAgent가 그릴 수 있는 사건과 카메라 계획으로 바꾼다. 스토리를 다시 쓰거나 이미지를 직접 생성하지 않는다.
 
 ## 입력
 
@@ -20,14 +20,11 @@ StoryCritic과 DialogueNaturalnessAgent를 통과한 6비트를 ArtDirectorAgent
 - 감정과 정보 공개에 맞는 카메라 거리와 각도
 - 기존 대사를 가리지 않는 말풍선 안전영역
 
-## 6컷 점검
+## 레이아웃 기반 점검
 
 - 패널 1: 모바일 피드에서 즉시 읽히는 단일 초점과 질문.
-- 패널 2: 정상 상태 또는 첫 대응.
-- 패널 3: 상태가 분명히 커지는 변화.
-- 패널 4: 문제가 복잡해지는 새 정보나 행동.
-- 패널 5: 결말 직전의 방향 전환.
-- 패널 6: 짧은 payoff를 한눈에 이해시키는 최종 상태.
+- 내부 패널: 직전 패널과 구별되는 상태 변화, 행동, 또는 정보를 한 가지씩 보인다.
+- 마지막 패널: 짧은 payoff를 한눈에 이해시키는 최종 상태.
 
 ## 경계
 

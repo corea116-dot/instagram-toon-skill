@@ -16,6 +16,7 @@ Beat = Literal[
     "tension",
     "twist",
     "opening_hook",
+    "development",
     "development_setup",
     "development_escalation",
     "development_complication",
@@ -46,6 +47,9 @@ PRIMARY_HUMOR_ENGINE_IDS = (
     "social_timing_or_role_reversal",
 )
 NonBlankString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+OutputLayout = Annotated[
+    tuple[Annotated[int, Field(ge=1, le=4)], ...], Field(min_length=1)
+]
 
 
 class StrictModel(BaseModel):
@@ -69,7 +73,7 @@ class RichDirectionModel(StrictModel):
     engine_explanation: NonBlankString
     hook_promise: NonBlankString
     development_changes: Annotated[
-        tuple[NonBlankString, ...], Field(min_length=4, max_length=4)
+        tuple[NonBlankString, ...], Field(min_length=1)
     ]
     payoff_reversal: NonBlankString
     beat_signature: NonBlankString
@@ -77,10 +81,10 @@ class RichDirectionModel(StrictModel):
 
     @model_validator(mode="after")
     def development_changes_are_distinct(self) -> Self:
-        if len(set(self.development_changes)) != 4:
+        if len(set(self.development_changes)) != len(self.development_changes):
             raise PydanticCustomError(
                 "direction_development_changes",
-                "1.1 directions require four distinct development changes",
+                "directions require distinct development changes",
             )
         return self
 
@@ -126,12 +130,17 @@ class BriefModel(StrictModel):
     selected_humor_engine_id: str | None = None
     selected_beat_signature: str | None = None
     hook_mode: str | None = None
+    output_layout: OutputLayout | None = None
     story_module_policy: Literal["auto_with_overrides"] | None = None
     status: Literal["draft", "approved", "published"] = "draft"
 
     @model_validator(mode="after")
     def validates_schema_specific_direction_contract(self) -> Self:
         if self.schema_version == "1.0":
+            if self.output_layout is not None:
+                raise PydanticCustomError(
+                    "output_layout", "brief schema 1.0 must not define output_layout"
+                )
             if not all(isinstance(direction, DirectionModel) for direction in self.directions):
                 raise PydanticCustomError(
                     "brief_directions",
@@ -156,6 +165,19 @@ class BriefModel(StrictModel):
             raise PydanticCustomError(
                 "brief_humor_engines",
                 "brief schema 1.1 requires at least two distinct primary humor engines",
+            )
+        if self.output_layout is None:
+            expected_changes = 4
+        else:
+            expected_changes = sum(self.output_layout) - 2
+        if not all(
+            len(direction.development_changes) == expected_changes
+            for direction in self.directions
+            if isinstance(direction, RichDirectionModel)
+        ):
+            raise PydanticCustomError(
+                "brief_development_changes",
+                "directions must have one development change per inner story panel",
             )
         if (
             self.selected_humor_engine_id is None

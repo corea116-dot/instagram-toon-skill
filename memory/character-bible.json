@@ -7,12 +7,23 @@
       "role": "일상의 작은 결심이 자주 흔들리는 사람",
       "identity": {
         "age_range": "late-20s-to-30s adult",
-        "face": "large simple rounded peach face, short thick black eyebrows, tiny dot eyes, small curved nose, and a full rounded black beard",
-        "hair": "short close-cropped black hair with a softly rounded silhouette",
-        "body": "simple rounded adult proportions with broad torso and short limbs"
+        "face": "crooked oversized tilted peach face, asymmetrical ears, short uneven black eyebrows, tiny black dot eyes without eye whites, a tiny simple mouth, and a full messy scribbled black beard",
+        "hair": "messy spiky black crayon hair with broken uneven edges",
+        "body": "deliberately crude preschool-drawing adult proportions with a tiny black-clothed torso, thin awkward limbs, mitten-like hands, and oversized bare feet",
+        "immutable_traits": [
+          "crooked oversized tilted peach face and asymmetrical ear placement",
+          "messy spiky black crayon hair and broken hairline",
+          "full messy scribbled black beard with the same facial coverage",
+          "short uneven eyebrows, tiny black dot eyes without eye whites, and a tiny simple mouth",
+          "warm skin tone",
+          "tiny torso, thin awkward limbs, mitten-like hands, and oversized bare feet",
+          "expression changes only through eyebrow angle, tiny mouth, head tilt, and body posture"
+        ]
       },
       "wardrobe": {
         "default": "black knit top and black trousers",
+        "footwear_default": "bare feet",
+        "story_override_allowed": true,
         "work": "black knit top and black trousers",
         "colors": [
           "#292724",
@@ -35,7 +46,7 @@
         ]
       },
       "reference_images": [
-        "assets/references/characters/bgoon/bgoon-authoritative-user-reference.jpg"
+        "assets/references/styles"
       ]
     }
   ]

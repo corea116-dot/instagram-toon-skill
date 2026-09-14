@@ -1,19 +1,16 @@
 # Story Rules
 
-## Six-beat story structure
+## Layout-driven story structure
 
 1. **Opening hook:** Stop the scroll with an immediately legible visual situation, one concise line, or both. Create curiosity or instant recognition without explaining the setup or spoiling the ending.
-2. **Development setup:** Identify the person, place, goal, and ordinary problem with the minimum context needed.
-3. **Development escalation:** Make the problem visibly worse through a new action or consequence.
-4. **Development complication:** Add a plausible excuse, obstacle, misunderstanding, or false expectation.
-5. **Development turn:** Tighten the expectation and point the reader toward the ending without delivering it early.
-6. **Ending payoff:** Resolve or reverse the expectation with one short, clear, visually playable beat.
+2. **Development beats:** Use one state-changing beat for each inner panel. Establish, escalate, complicate, or turn the expectation as the selected panel count needs.
+3. **Ending payoff:** Resolve or reverse the expectation with one short, clear, visually playable beat.
 
 Make each panel necessary. The premise must be understandable without the caption. Keep the ending payoff shorter than the development that earns it and do not explain the joke after it lands.
 
 ## Direction contract and humor engines
 
-IdeaAgent returns exactly three directions. Each direction records `premise`, `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, exactly four distinct visible `development_changes`, `payoff_reversal`, `beat_signature`, and `why_relatable`. Across the three, use at least two distinct primary engines. A WriterAgent may realize this contract but must not silently replace its engine, contradiction, or payoff.
+IdeaAgent returns exactly three directions. Each direction records `premise`, `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, one or more distinct visible `development_changes`, `payoff_reversal`, `beat_signature`, and `why_relatable`. Across the three, use at least two distinct primary engines. WriterAgent realizes one change per selected inner panel and may not silently replace its engine, contradiction, or payoff.
 
 Primary engines: `semantic_authority_reversal`, `personified_cognition_action_contradiction`, `self_rationalization_loop`, `magnitude_mismatch`, `repetition_escalation`, `collective_optimism_reality_collapse`, `moving_goalpost_paralysis`, `social_timing_or_role_reversal`, or `other` with an equally explicit mechanism explanation. Preferred engines break genuine ties only; they are never quotas.
 
@@ -71,7 +68,7 @@ Each panel must include:
 }
 ```
 
-Use the sections `opening`, `development`, `development`, `development`, `development`, and `ending` in that order. Use the beat values `opening_hook`, `development_setup`, `development_escalation`, `development_complication`, `development_turn`, and `ending_payoff` once each, in that order. Dialogue geometry is a required 1080x1350 safe-area request in pixels, not a hand-drawn bubble; the composer deterministically wraps, sizes, and fits the final bubble within it. State every prop whose position or condition matters in later panels.
+Use `opening` and `opening_hook` once, `development` once per inner panel, and `ending` with `ending_payoff` once. Dialogue geometry is a required 1080x1350 safe-area request in pixels, not a hand-drawn bubble; the composer deterministically wraps, sizes, and fits the final bubble within it. State every prop whose position or condition matters in later panels.
 
 ## Originality and safety
 
@@ -87,4 +84,4 @@ Write `caption.txt` after the panels pass story QA. Keep it complementary rather
 
 ## Story-quality 1.1 contract
 
-Automatic topic selection must pass source relevance, human observation, behavioral contradiction, a named humor engine, a hook/payoff seed, safety, and duplicate gates before scoring; high scores never override ineligibility. A direct user topic skips the scout. Produce exactly three directions across at least two humor engines, then apply StoryCritic in premise and script stages with at most two total rewrites. Every direction records `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, exactly four `development_changes`, `payoff_reversal`, and `beat_signature`; matching either a prior beat signature or payoff is a hard duplicate. Prohibit profanity and obfuscation, while allowing natural rough non-profane Korean.
+Automatic topic selection must pass source relevance, human observation, behavioral contradiction, a named humor engine, a hook/payoff seed, safety, and duplicate gates before scoring; high scores never override ineligibility. A direct user topic skips the scout. Produce exactly three directions across at least two humor engines, then apply StoryCritic in premise and script stages with at most two total rewrites. Every direction records `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, one or more `development_changes`, `payoff_reversal`, and `beat_signature`; matching either a prior beat signature or payoff is a hard duplicate. Prohibit profanity and obfuscation, while allowing natural rough non-profane Korean.

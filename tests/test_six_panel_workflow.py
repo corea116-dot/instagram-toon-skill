@@ -21,18 +21,17 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import os
-from pathlib import Path
 import subprocess
-import importlib
 import sys
+from pathlib import Path
 from typing import ClassVar, Literal
 
+import pytest
 from PIL import Image
 from pydantic import BaseModel, ConfigDict
-import pytest
-
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
@@ -43,6 +42,7 @@ type OpeningBeat = Literal["opening_hook", "development_setup"]
 
 sys.path.insert(0, str(SCRIPTS))
 compose_episode = importlib.import_module("compose_episode")
+reference_policy = importlib.import_module("reference_policy")
 
 
 class HistoryEntryModel(BaseModel):
@@ -173,16 +173,132 @@ def _primary_references() -> list[str]:
     visual_style = json.loads(
         (SKILL_ROOT / "memory" / "visual-style.json").read_text(encoding="utf-8")
     )
-    return visual_style["reference_policy"]["primary_reference_images"]
+    return list(reference_policy.resolve_reference_paths(
+        tuple(visual_style["reference_policy"]["primary_reference_images"]),
+        SKILL_ROOT,
+        "style references",
+    ))
+
+
+def _character_references() -> list[str]:
+    character_bible = json.loads(
+        (SKILL_ROOT / "memory" / "character-bible.json").read_text(encoding="utf-8")
+    )
+    return list(reference_policy.resolve_reference_paths(
+        tuple(character_bible["characters"][0]["reference_images"]),
+        SKILL_ROOT,
+        "character references",
+    ))
+
+
+def test_resolve_reference_paths_includes_every_style_image(tmp_path: Path) -> None:
+    skill_root = tmp_path / "skill"
+    styles = skill_root / "assets/references/styles"
+    styles.mkdir(parents=True)
+    (styles / "z.png").write_bytes(b"z")
+    (styles / "a.jpg").write_bytes(b"a")
+    (styles / ".hidden.png").write_bytes(b"hidden")
+
+    references = reference_policy.resolve_reference_paths(
+        ("assets/references/styles",), skill_root, "references"
+    )
+
+    assert references == (
+        "assets/references/styles/a.jpg",
+        "assets/references/styles/z.png",
+    )
+
+
+def test_style_folder_images_replace_legacy_current_reference_without_json_edits(
+    tmp_path: Path,
+) -> None:
+    skill_root = tmp_path / "skill"
+    current = skill_root / "assets/references/current"
+    styles = skill_root / "assets/references/styles"
+    current.mkdir(parents=True)
+    styles.mkdir(parents=True)
+    (current / "old.png").write_bytes(b"old")
+    first = styles / "first.png"
+    first.write_bytes(b"first")
+    second = styles / "second.png"
+    second.write_bytes(b"second")
+    os.utime(first, ns=(1_000_000_000, 1_000_000_000))
+    os.utime(second, ns=(2_000_000_000, 2_000_000_000))
+
+    assert reference_policy.resolve_reference_paths(
+        ("assets/references/styles",), skill_root, "references"
+    ) == (
+        "assets/references/styles/first.png",
+        "assets/references/styles/second.png",
+    )
+
+    third = styles / "replacement.jpg"
+    third.write_bytes(b"replacement")
+    os.utime(third, ns=(3_000_000_000, 3_000_000_000))
+    assert reference_policy.resolve_reference_paths(
+        ("assets/references/styles",), skill_root, "references"
+    ) == (
+        "assets/references/styles/first.png",
+        "assets/references/styles/replacement.jpg",
+        "assets/references/styles/second.png",
+    )
+
+
+def test_targeted_compose_drops_previous_style_image_after_folder_replacement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    episode = _make_episode(tmp_path)
+    skill_root = tmp_path / "skill"
+    styles = skill_root / "assets/references/styles"
+    styles.mkdir(parents=True)
+    first = styles / "first.png"
+    first.write_bytes(b"first")
+    monkeypatch.setattr(compose_episode, "SKILL_ROOT", skill_root)
+
+    _ = compose_episode.compose(
+        compose_episode.ComposeOptions(episode_dir=episode, mock=True, panel=None)
+    )
+    prompt_path = episode / "prompts/panel-1.json"
+    original = json.loads(prompt_path.read_text(encoding="utf-8"))
+    assert original["reference_images"] == ["assets/references/styles/first.png"]
+
+    replacement = styles / "replacement.png"
+    replacement.write_bytes(b"replacement")
+    first.unlink()
+    _ = compose_episode.compose(
+        compose_episode.ComposeOptions(episode_dir=episode, mock=True, panel=1)
+    )
+    refreshed = json.loads(prompt_path.read_text(encoding="utf-8"))
+    assert refreshed["revision"] == 1
+    assert refreshed["reference_images"] == ["assets/references/styles/replacement.png"]
+
+
+def test_empty_styles_folder_uses_preserved_current_image(tmp_path: Path) -> None:
+    skill_root = tmp_path / "skill"
+    current = skill_root / "assets/references/current"
+    current.mkdir(parents=True)
+    (current / "baseline.png").write_bytes(b"baseline")
+    (current / "second.jpg").write_bytes(b"second")
+
+    assert reference_policy.resolve_reference_paths(
+        ("assets/references/styles",), skill_root, "references"
+    ) == (
+        "assets/references/current/baseline.png",
+        "assets/references/current/second.jpg",
+    )
 
 
 def test_six_panel_story_exports_three_delivery_images_when_composed(
     tmp_path: Path,
 ) -> None:
     episode = _make_episode(tmp_path)
+    character_references = _character_references()
     references = _primary_references()
-    assert len(references) == 3
+    assert character_references
+    assert references
+    assert all((SKILL_ROOT / reference).is_file() for reference in character_references)
     assert all((SKILL_ROOT / reference).is_file() for reference in references)
+    expected_references = list(dict.fromkeys([*character_references, *references]))
 
     composed = _run("compose_episode.py", "--episode-dir", str(episode), "--mock")
     assert composed.returncode == 0, composed.stderr
@@ -190,7 +306,10 @@ def test_six_panel_story_exports_three_delivery_images_when_composed(
         prompt = json.loads(
             (episode / "prompts" / f"panel-{number}.json").read_text(encoding="utf-8")
         )
-        assert prompt["reference_images"][:3] == references
+        assert prompt["reference_images"] == expected_references
+        assert "Character identity lock" in prompt["prompt"]
+        assert "black knit top and black trousers" in prompt["prompt"]
+        assert "bare feet" in prompt["prompt"]
     expected = (
         episode / "final" / "opening.png",
         episode / "final" / "development-four-panel.png",
@@ -229,6 +348,7 @@ def test_only_fifth_panel_and_development_composite_change_when_regenerated(
     tmp_path: Path,
 ) -> None:
     episode = _make_episode(tmp_path)
+    character_references = _character_references()
     references = _primary_references()
     initial = _run("compose_episode.py", "--episode-dir", str(episode), "--mock")
     assert initial.returncode == 0, initial.stderr
@@ -256,7 +376,8 @@ def test_only_fifth_panel_and_development_composite_change_when_regenerated(
     prompt = json.loads(
         (episode / "prompts" / "panel-5.json").read_text(encoding="utf-8")
     )
-    assert prompt["reference_images"][:3] == references
+    expected_references = list(dict.fromkeys([*character_references, *references]))
+    assert prompt["reference_images"] == expected_references
 
 
 def test_hard_banned_phrase_blocks_validation(tmp_path: Path) -> None:
@@ -302,6 +423,7 @@ def test_native_partial_compose_refreshes_manifest_and_reuses_raw_panel(
     tmp_path: Path,
 ) -> None:
     episode = _make_episode(tmp_path)
+    character_references = _character_references()
     references = _primary_references()
     composed = _run("compose_episode.py", "--episode-dir", str(episode), "--mock")
     assert composed.returncode == 0, composed.stderr
@@ -318,7 +440,8 @@ def test_native_partial_compose_refreshes_manifest_and_reuses_raw_panel(
     refreshed = json.loads(prompt_path.read_text(encoding="utf-8"))
     assert refreshed["revision"] == 1
     assert refreshed["mode"] == "native"
-    assert refreshed["reference_images"] == [*references, "legacy-extra.png"]
+    expected_references = list(dict.fromkeys([*character_references, *references]))
+    assert refreshed["reference_images"] == [*expected_references, "legacy-extra.png"]
     assert _digest(raw_path) == raw_before
 
 
@@ -365,10 +488,7 @@ def test_native_partial_compose_refreshes_manifest_and_reuses_raw_panel(
             ],
             "not a regular file",
         ),
-        (
-            ["assets/references/styles/screenshots-2026-07-19/스크린샷 2026-07-19 오후 4.07.38.png"],
-            "three paths",
-        ),
+        ([], "at least one path"),
     ),
 )
 def test_compose_fails_before_creating_prompts_for_invalid_primary_references(
@@ -401,24 +521,86 @@ def test_compose_rejects_primary_reference_symlink_escape(
     skill_root = tmp_path / "skill"
     outside_file = tmp_path / "outside.png"
     outside_file.write_bytes(b"not a real image")
-    escaped_reference = skill_root / "references" / "escaped.png"
-    escaped_reference.parent.mkdir(parents=True)
-    escaped_reference.symlink_to(outside_file)
+    escaped_references = tuple(
+        skill_root / "references" / f"escaped-{number}.png" for number in range(1, 4)
+    )
+    escaped_references[0].parent.mkdir(parents=True)
+    for escaped_reference in escaped_references:
+        escaped_reference.symlink_to(outside_file)
+    character_reference = skill_root / "references" / "bgoon.png"
+    character_reference.write_bytes(b"not a real image")
 
     visual_style = json.loads(
         (SKILL_ROOT / "memory" / "visual-style.json").read_text(encoding="utf-8")
     )
     visual_style["reference_policy"]["primary_reference_images"] = [
-        "references/escaped.png",
-        "references/escaped.png",
-        "references/escaped.png",
+        "references/escaped-1.png",
+        "references/escaped-2.png",
+        "references/escaped-3.png",
     ]
     invalid_style = tmp_path / "visual-style.json"
     _write_json(invalid_style, visual_style)
+    character_bible = json.loads(
+        (SKILL_ROOT / "memory" / "character-bible.json").read_text(encoding="utf-8")
+    )
+    character_bible["characters"][0]["reference_images"] = ["references/bgoon.png"]
+    valid_character_bible = tmp_path / "character-bible.json"
+    _write_json(valid_character_bible, character_bible)
     monkeypatch.setattr(compose_episode, "SKILL_ROOT", skill_root)
     monkeypatch.setattr(compose_episode, "VISUAL_STYLE_PATH", invalid_style)
+    monkeypatch.setattr(compose_episode, "CHARACTER_BIBLE_PATH", valid_character_bible)
 
     with pytest.raises(compose_episode.RenderError, match="escapes"):
+        compose_episode.compose(
+            compose_episode.ComposeOptions(episode_dir=episode, mock=True, panel=None)
+        )
+
+    assert not (episode / "prompts").exists()
+
+
+def test_story_required_wardrobe_override_carries_forward_without_identity_drift(
+    tmp_path: Path,
+) -> None:
+    episode = _make_episode(tmp_path)
+    script_path = episode / "script.json"
+    script = json.loads(script_path.read_text(encoding="utf-8"))
+    script["panels"][2]["wardrobe_overrides"] = [
+        {
+            "character_id": "bgoon",
+            "outfit": "raincoat and waterproof trousers",
+            "footwear": "yellow rain boots",
+            "story_reason": "panel 3 begins in heavy rain",
+        }
+    ]
+    _write_json(script_path, script)
+
+    composed = _run("compose_episode.py", "--episode-dir", str(episode), "--mock")
+
+    assert composed.returncode == 0, composed.stderr
+    second = json.loads((episode / "prompts" / "panel-2.json").read_text(encoding="utf-8"))
+    third = json.loads((episode / "prompts" / "panel-3.json").read_text(encoding="utf-8"))
+    fourth = json.loads((episode / "prompts" / "panel-4.json").read_text(encoding="utf-8"))
+    assert "outfit=black knit top and black trousers; footwear=bare feet" in second["prompt"]
+    assert "outfit=raincoat and waterproof trousers; footwear=yellow rain boots" in third["prompt"]
+    assert "outfit=raincoat and waterproof trousers; footwear=yellow rain boots" in fourth["prompt"]
+    assert third["continuity"]["locked_characters"] == ["bgoon"]
+
+
+def test_missing_character_reference_blocks_compose_before_prompt_creation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    episode = _make_episode(tmp_path)
+    character_bible = json.loads(
+        (SKILL_ROOT / "memory" / "character-bible.json").read_text(encoding="utf-8")
+    )
+    character_bible["characters"][0]["reference_images"] = [
+        "assets/references/characters/missing.png"
+    ]
+    invalid_character_bible = tmp_path / "character-bible.json"
+    _write_json(invalid_character_bible, character_bible)
+    monkeypatch.setattr(compose_episode, "CHARACTER_BIBLE_PATH", invalid_character_bible)
+
+    with pytest.raises(compose_episode.RenderError, match="missing.png"):
         compose_episode.compose(
             compose_episode.ComposeOptions(episode_dir=episode, mock=True, panel=None)
         )

@@ -13,12 +13,15 @@ Use this workflow inside Codex Desktop, Codex CLI, or an IDE extension. Do not b
 
 ## 1. Resolve the brief
 
-Accept either an explicit invocation such as `$instagram-toon 주제: ...` or a natural-language request to create a six-beat Instagram toon package. Resolve these fields from the current request, prior conversation, and project files before asking anything:
+Accept either an explicit invocation such as `$instagram-toon 주제: ...` or a natural-language request to create an Instagram toon package. Resolve these fields from the current request, prior conversation, and project files before asking anything:
 
 - `topic`
 - `audience`
 - `tone`
 - `characters`
+- `output_layout`
+
+Parse explicit output requests into page sizes: `2컷+3컷` becomes `[2, 3]` and `1컷짜리 5장` becomes `[1, 1, 1, 1, 1]`. Default to `[1, 1, 1, 1, 1]` when no output shape is requested. A page may contain one to four panels, and the sum is the story panel count. New scripts use schema 1.1 and record this array in `script.json`.
 
 Run `InstagramPostAnalystAgent` first if the current request was explicitly invoked as `$instagram-toon` and contains exactly one direct Instagram post or reel link. Resolve the URL through `scripts/instagram_link_routing.py`, read `references/instagram-link-analysis.md`, set `brief.json.topic_origin` to `instagram_link`, and write `instagram-source.json` before IdeaAgent. This takes precedence over separately supplied topic wording, which becomes only an audience, tone, or analysis-angle constraint. A URL without an explicit invocation, an implicit skill selection, no URL, multiple URLs, profile URL, story, live, or non-Instagram URL must not activate this agent. An invalid or ambiguous URL asks for one direct post or reel URL. Public access failure asks for a permitted attachment or summary and stops; it never falls back to EditorialScoutAgent.
 
@@ -68,11 +71,11 @@ Return exactly five candidates and one selected candidate matching 1.1 `topic-re
 
 ### IdeaAgent
 
-Read the brief, `memory/banned-topics.json`, and `memory/episode-history.json`. Return JSON with exactly three distinct 1.1 directions, duplicate findings, and sensitivity findings. Each direction needs `premise`, `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, exactly four distinct visible `development_changes`, `payoff_reversal`, `beat_signature`, and `why_relatable`; across all three use at least two primary engines. Do not write finished dialogue.
+Read the brief, including its selected `output_layout`, plus `memory/banned-topics.json` and `memory/episode-history.json`. Return JSON with exactly three distinct 1.1 directions, duplicate findings, and sensitivity findings. Each direction needs one distinct visible `development_change` per inner panel in the selected layout, plus `premise`, `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, `payoff_reversal`, `beat_signature`, and `why_relatable`; across all three use at least two primary engines. Do not write finished dialogue.
 
 ### WriterAgent
 
-Read the chosen direction plus `references/story-rules.md` and `references/output-schema.md`. Return one `script.json` object with exactly six panels: one opening hook, four development beats, and one ending payoff. Panel 1 must use a strong visual hook, concise dialogue hook, or both; it must create a concrete reason to continue without revealing the ending. Include section, beat, scene, expression, action, props, background, camera, and no more than two dialogue bubbles per panel.
+Read the chosen direction plus `references/story-rules.md` and `references/output-schema.md`. Return one schema 1.1 `script.json` object whose `output_layout` matches the request: one opening hook, one or more development beats, and one ending payoff. Panel 1 must use a strong visual hook, concise dialogue hook, or both; it must create a concrete reason to continue without revealing the ending. Include section, beat, scene, expression, action, props, background, camera, and no more than two dialogue bubbles per panel.
 
 ### StoryCriticAgent
 
@@ -90,9 +93,9 @@ Read `memory/character-bible.json`, `memory/visual-style.json`, and the current 
 
 ### ArtDirectorAgent
 
-Read character reference paths from `memory/character-bible.json` and the full policy in `memory/visual-style.json`. First settle a single six-beat storyboard and camera plan. Compose panel 1 for instant mobile-feed impact with a clear focal subject, strong expression or action, and uncluttered hook dialogue space when used. Then produce `prompts/panel-N.json` and generate panels in order 1 through 6, using prior panels as continuity context where the available image tool permits.
+Read character reference paths from `memory/character-bible.json` and the full policy in `memory/visual-style.json`. First settle a storyboard and camera plan matching the selected `output_layout`. Compose panel 1 for instant mobile-feed impact with a clear focal subject, strong expression or action, and uncluttered hook dialogue space when used. Then produce `prompts/panel-N.json` and generate panels in order, using prior panels as continuity context where the available image tool permits.
 
-For every new panel and every user-requested targeted regeneration, put the three ordered `primary_reference_images` in `reference_images` before any character path. Enforce their strict palette, one flat or nearly empty background, two-prop maximum, and playful-but-quiet mood in both `prompt` and `negative_prompt`. Use the images only for those style properties; never copy their cat, characters, scene, props, pose, text, watermark, signature, or logo. If character visuals conflict with the primary style, prioritize the primary style. Never request text, captions, lettering, speech bubbles, UI text, watermarks, or signatures inside generated art.
+For every new panel and every user-requested targeted regeneration, run `uv run scripts/active_reference.py` immediately before building provider prompts. Resolve the shared character/style directory marker to all reported image paths; put character references first in `reference_images`, then all primary style references, and deduplicate shared images. Never attach the directory itself or removed images from prior prompts. Enforce the immutable character traits from the character bible before applying the style palette, one flat or nearly empty background, two-prop maximum, and playful-but-quiet mood. Style references may not alter face, hair, beard, skin tone, body proportions, or expression grammar. Use `wardrobe_overrides` only when the script gives a `story_reason`, and carry the resulting outfit and footwear through later panels. Never request text, captions, lettering, speech bubbles, UI text, watermarks, or signatures inside generated art.
 
 ### VisualCriticAgent
 
@@ -108,11 +111,11 @@ prompts/panel-N.json -> image provider -> raw/panel-N.png (1080x1350)
 
 For version 1, prefer the image generation feature available to the current Codex surface. In mock mode, `compose_episode.py` deterministically creates the same `raw/panel-N.png` contract without a network call. A future `scripts/generate_panel.py` may implement the OpenAI Image API, but it must consume `schema_version`, `panel`, `revision`, `mode`, `size`, `prompt`, `negative_prompt`, `reference_images`, `bubble_safe_areas`, and `continuity` from the same prompt JSON and produce the same PNG path; composition, validation, and history scripts must not import or call a provider SDK. Every provider must output an exact 1080x1350 PNG.
 
-Store user-supplied character images under `assets/references/characters/` and style images under `assets/references/styles/`, then record their project-relative paths in the corresponding memory JSON. Do not embed image binaries in JSON.
+Store shared character/style references directly under `assets/references/styles/`; every supported image directly in that folder is auto-attached without editing memory JSON. Store separate character-only images under `assets/references/characters/` and register those paths in the character bible. Do not embed image binaries in JSON.
 
 ## 5. Compose deterministically
 
-Insert Korean dialogue only after raw art exists. The composer owns font selection, wrapping, font-size reduction, bubble geometry, placement, the opening/development/ending delivery layout, PNG encoding, and file names. Generated art remains text-free.
+Insert Korean dialogue only after raw art exists. The composer owns font selection, wrapping, font-size reduction, bubble geometry, placement, the selected page layout, PNG encoding, and file names. Generated art remains text-free.
 
 Run a full mock composition:
 
@@ -126,7 +129,7 @@ Regenerate and recompose only panel 3:
 uv run scripts/compose_episode.py --episode-dir episodes/EP-001-example --mock --panel 3
 ```
 
-Single-panel mode reads the existing prompt manifest and increments its `revision` automatically. It may change only the named prompt, raw panel, and internal `composed/panel-N.png`; then it changes exactly one final image: `final/opening.png` for panel 1, `final/development-four-panel.png` for panels 2–5, or `final/ending.png` for panel 6. Other prompt manifests, raw panels, composed panels, and final images must remain byte-for-byte unchanged.
+Single-panel mode reads the existing prompt manifest and increments its `revision` automatically. It may change only the named prompt, raw panel, and internal `composed/panel-N.png`; then it changes exactly one `final/page-NN.png` containing that panel. Other prompt manifests, raw panels, composed panels, and final images must remain byte-for-byte unchanged. Schema 1.0 episodes retain their legacy target mapping.
 
 ## 6. Validate and record
 
@@ -140,7 +143,7 @@ uv run scripts/update_history.py \
   --status draft
 ```
 
-Success must print the resulting path. Failure must print an understandable error to stderr and return a nonzero exit code. Require all paths listed in `references/output-schema.md`, valid JSON, a valid `module-routing.json` whenever `story_module_policy` is `auto_with_overrides`, a valid `topic-research.json` whenever `topic_origin` is `editorial_scout`, a valid `instagram-source.json` whenever `topic_origin` is `instagram_link`, six panels in the required section and beat order, at most two bubbles per panel, three 1080x1350 final PNGs, and 1080x1350 internal composed panels. Historical briefs without the policy marker remain readable, and the deterministic tools may still read exact four-panel legacy episodes for targeted recomposition. Write deterministic findings and a compact active/skipped module summary to `qa-report.md` without discarding an existing Agent QA section, then summarize both agent and script results in chat.
+Success must print the resulting path. Failure must print an understandable error to stderr and return a nonzero exit code. Require all paths listed in `references/output-schema.md`, valid JSON, a valid `module-routing.json` whenever `story_module_policy` is `auto_with_overrides`, a valid `topic-research.json` whenever `topic_origin` is `editorial_scout`, a valid `instagram-source.json` whenever `topic_origin` is `instagram_link`, an opening, one or more development panels, an ending, at most two bubbles per panel, one 1080x1350 final PNG per requested output group, and 1080x1350 internal composed panels. Historical briefs without the policy marker remain readable, and the deterministic tools may still read exact four-panel and six-panel legacy episodes for targeted recomposition. Write deterministic findings and a compact active/skipped module summary to `qa-report.md` without discarding an existing Agent QA section, then summarize both agent and script results in chat.
 
 Remove temporary files and staging directories created during the run. Preserve episode artifacts, user reference images, and memory. Stop before any external publishing step unless the user has explicitly approved it.
 

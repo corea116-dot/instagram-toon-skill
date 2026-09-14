@@ -1,7 +1,7 @@
 interface:
   display_name: "Instagram Toon"
-  short_description: "주제·공개 Instagram 링크로 만드는 3장 인스타툰"
-  default_prompt: "Use $instagram-toon to have the automatic topic scout use $ulw-research with public Instagram and community sources when I omit a topic, prioritize only cited visible public engagement before story score, use my supplied topic when present, or analyze exactly one public direct Instagram post or reel link when I explicitly include one; then create a reviewed opening, four-panel development composite, and ending image."
+  short_description: "주제·공개 Instagram 링크로 만드는 가변 레이아웃 인스타툰"
+  default_prompt: "Use $instagram-toon to create a reviewed Instagram toon. Honor an explicit output layout such as 2컷+3컷; otherwise create five single-panel images."
 
 policy:
   allow_implicit_invocation: true

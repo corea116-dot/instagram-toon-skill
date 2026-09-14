@@ -2,7 +2,7 @@
 
 ## Promise
 
-Create compact six-beat stories delivered as three images: one strong opening hook, one four-panel development composite, and one gentle, clear ending payoff. Humor should invite recognition rather than ridicule.
+Create compact stories with one strong opening hook, state-changing inner beats, and one gentle, clear ending payoff. Honor the requested output layout; absent a request, deliver five single-panel images. Humor should invite recognition rather than ridicule.
 
 ## Voice
 
@@ -31,4 +31,4 @@ Keep the edge humane: blunt, mildly sarcastic, or self-directed non-profane Kore
 
 ## Reference assets
 
-Character references belong in `assets/references/characters/`; style references belong in `assets/references/styles/`. Record only project-relative paths in the JSON bibles so the project remains portable.
+Character references belong in `assets/references/characters/`; style references belong in `assets/references/styles/`. Record only project-relative paths in the JSON bibles so the project remains portable. Authoritative character references always take priority over style: face, hair, beard, skin tone, body proportions, and expression grammar remain unchanged. The default wardrobe is black knit top, black trousers, and bare feet. A story may explicitly change only clothing and footwear with a recorded story reason; the changed state continues until the story changes it again. Style controls background, palette, texture, mood, and composition only.

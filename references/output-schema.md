@@ -1,6 +1,6 @@
 # Output Contracts
 
-All JSON files use UTF-8, two-space indentation, and a trailing newline. New story-choice artifacts (`brief.json`, `topic-research.json`, and new episode-history entries) use `"schema_version": "1.1"`; historical 1.0 story-choice artifacts remain readable. Script, image-provider, and composition contracts remain 1.0. Paths stored in JSON are relative to the skill root. PNG files are 1080x1350 pixels.
+All JSON files use UTF-8, two-space indentation, and a trailing newline. New story-choice, script, and composition artifacts use `"schema_version": "1.1"`; historical 1.0 artifacts remain readable. Paths stored in JSON are relative to the skill root. PNG files are 1080x1350 pixels.
 
 ## Contents
 
@@ -26,30 +26,15 @@ episodes/EP-NNN-kebab-slug/
 ├── instagram-source.json        # required only for explicit Instagram-link selections
 ├── script.json
 ├── prompts/
-│   ├── panel-1.json
-│   ├── panel-2.json
-│   ├── panel-3.json
-│   ├── panel-4.json
-│   ├── panel-5.json
-│   └── panel-6.json
+│   └── panel-N.json                # one file per ordered story panel
 ├── raw/
-│   ├── panel-1.png
-│   ├── panel-2.png
-│   ├── panel-3.png
-│   ├── panel-4.png
-│   ├── panel-5.png
-│   └── panel-6.png
+│   └── panel-N.png
 ├── composed/
-│   ├── panel-1.png
-│   ├── panel-2.png
-│   ├── panel-3.png
-│   ├── panel-4.png
-│   ├── panel-5.png
-│   └── panel-6.png
+│   └── panel-N.png
 ├── final/
-│   ├── opening.png
-│   ├── development-four-panel.png
-│   ├── ending.png
+│   ├── page-01.png
+│   ├── page-02.png
+│   └── page-NN.png
 │   └── composition.json
 ├── caption.txt
 └── qa-report.md
@@ -57,7 +42,7 @@ episodes/EP-NNN-kebab-slug/
 
 Use the next zero-padded history number and a short filesystem-safe slug. Never overwrite a different episode to reuse a number.
 
-For every new six-beat episode, `final/` contains exactly three postable 1080x1350 images: the standalone opening, the 2×2 development composite built from panels 2–5, and the standalone ending. `composed/` retains the six dialogue-composited panels only as deterministic inputs for targeted regeneration; it is not a publishing export. Exact four-panel legacy episodes retain their historical `final/four-panel.png` and `final/carousel-N.png` structure.
+For every new episode, `final/` contains one postable 1080x1350 `page-NN.png` per `output_layout` group. A group of one copies its composed panel; groups of two, three, and four use the documented layouts. `composed/` retains dialogue-composited panels only as deterministic inputs for targeted regeneration; it is not a publishing export. Schema 1.0 four- and six-panel episodes retain their historical names and exports.
 
 ## `brief.json`
 
@@ -68,6 +53,7 @@ Required keys:
   "schema_version": "1.1",
   "episode_id": "EP-001",
   "title": "새벽 세 시의 결심",
+  "output_layout": [1, 1, 1, 1, 1],
   "topic": "일찍 자려다 휴대폰을 보는 사람",
   "topic_origin": "user",
   "audience": "일상 공감 독자",
@@ -98,7 +84,7 @@ Required keys:
 }
 ```
 
-`topic_origin` is `user` when the user supplied the topic, `editorial_scout` only when EditorialScoutAgent selected it, and `instagram_link` only after the explicit one-link analysis route passes. Direct user topics bypass EditorialScoutAgent. `story_module_policy` is `auto_with_overrides` for new episodes using conditional story modules; historical briefs may omit it and remain readable. `directions` contains exactly three candidates, at least two primary humor engines, and exactly four distinct visible development changes per direction. `selected_direction` names one of their IDs. Both check results are restricted to `pass` or `review`; `matched_episode_ids` and `issues` may be empty but the checks may not be omitted from a newly planned episode. `status` is restricted to `draft`, `approved`, or `published`. The deterministic mock composer may also accept a legacy/minimal brief because composition does not make story choices.
+`topic_origin` is `user` when the user supplied the topic, `editorial_scout` only when EditorialScoutAgent selected it, and `instagram_link` only after the explicit one-link analysis route passes. Direct user topics bypass EditorialScoutAgent. `story_module_policy` is `auto_with_overrides` for new episodes using conditional story modules; historical briefs may omit it and remain readable. `directions` contains exactly three candidates, at least two primary humor engines, and one or more distinct visible development changes per direction. The selected layout determines how many changes WriterAgent realizes. `selected_direction` names one of their IDs. Both check results are restricted to `pass` or `review`; `matched_episode_ids` and `issues` may be empty but the checks may not be omitted from a newly planned episode. `status` is restricted to `draft`, `approved`, or `published`. The deterministic mock composer may also accept a legacy/minimal brief because composition does not make story choices.
 
 ## `module-routing.json`
 
@@ -290,13 +276,14 @@ The canonical URL must be one direct `/p/` or `/reel/` URL. Only a public, compl
 
 ## `script.json`
 
-Required keys are `schema_version`, `episode_id`, `title`, and exactly six `panels` for a new episode. The required section order is one `opening`, four `development`, and one `ending`; the matching beat order is `opening_hook`, `development_setup`, `development_escalation`, `development_complication`, `development_turn`, and `ending_payoff`. Each panel follows `references/story-rules.md`; each dialogue entry requires `speaker`, `text`, and integer `x`, `y`, `width`, and `height`. This geometry defines the requested safe area on a 1080x1350 panel. The composer, rather than an agent or image model, chooses line breaks and font size and fits the final bubble inside that area. The deterministic tools also accept the earlier exact four-panel beat contract only for legacy episodes.
+Required keys for a new script are `schema_version`, `episode_id`, `title`, `output_layout`, and ordered `panels`. `output_layout` is a nonempty list of page sizes from 1 through 4; its sum is the story-panel count. The sections are one `opening`, one or more `development`, and one `ending`; beats are `opening_hook`, repeated `development`, and `ending_payoff`. Each panel follows `references/story-rules.md`; each dialogue entry requires `speaker`, `text`, and integer `x`, `y`, `width`, and `height`. This geometry defines the requested safe area on a 1080x1350 panel. The composer, rather than an agent or image model, chooses line breaks and font size and fits the final bubble inside that area. The deterministic tools also accept the 1.0 four- and six-panel contracts as legacy episodes.
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "episode_id": "EP-001",
   "title": "새벽 세 시의 결심",
+  "output_layout": [1, 1, 1, 1, 1],
   "panels": [
     {
       "panel": 1,
@@ -323,7 +310,7 @@ Required keys are `schema_version`, `episode_id`, `title`, and exactly six `pane
 }
 ```
 
-The example shows only panel 1. Panels 2 through 5 use section `development`, and panel 6 uses section `ending`. StoryCriticAgent must record the opening-hook gate described in `references/qa-rubric.md` before art begins.
+The example shows only panel 1. Every inner panel uses section and beat `development`; the final panel uses `ending` and `ending_payoff`. StoryCriticAgent must record the opening-hook gate described in `references/qa-rubric.md` before art begins.
 
 ## `prompts/panel-N.json`
 
@@ -339,9 +326,8 @@ This file is the stable image-provider input.
   "prompt": "storyboard, identity, action, camera, and continuity; text-free illustration",
   "negative_prompt": "letters, Hangul, captions, speech bubbles, watermark",
   "reference_images": [
-    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.38.png",
-    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.07.58.png",
-    "assets/references/styles/screenshots-2026-07-19/\uc2a4\ud06c\ub9b0\uc0f7 2026-07-19 \uc624\ud6c4 4.08.23.png"
+    "assets/references/styles/reference-a.png",
+    "assets/references/styles/reference-b.png"
   ],
   "bubble_safe_areas": [{"x": 70, "y": 65, "width": 940, "height": 260}],
   "continuity": {
@@ -352,7 +338,7 @@ This file is the stable image-provider input.
 }
 ```
 
-For this skill, the first three `reference_images` entries must be the three ordered paths in `memory/visual-style.json` → `reference_policy.primary_reference_images` for every new panel and user-requested targeted regeneration. Append any character paths only after them. The current Codex image feature, deterministic mock generator, and future `scripts/generate_panel.py` must all output an exact 1080x1350 `raw/panel-N.png` from this contract.
+The two paths above are illustrative. Run `uv run scripts/active_reference.py` immediately before prompt creation and use every real path in its `reference_images` array, never the `assets/references/styles` directory marker itself. Every supported image directly in `styles/` is included in filename order; if that folder is empty, every supported image directly in `current/` is the fallback. For this skill, `reference_images` begins with resolved authoritative character references, followed by all resolved primary style references, deduplicating shared images, then explicitly allowed secondary references. This order applies to every new panel and user-requested targeted regeneration. `prompt` must lock immutable character identity and specify the effective wardrobe and footwear state. A panel may add `wardrobe_overrides` in `script.json` only with `character_id`, `outfit`, `footwear`, and `story_reason`; the state persists until another override. The current Codex image feature, deterministic mock generator, and future `scripts/generate_panel.py` must all output an exact 1080x1350 `raw/panel-N.png` from this contract.
 
 ## `final/composition.json`
 
@@ -360,8 +346,9 @@ Record deterministic layout decisions:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "canvas": [1080, 1350],
+  "output_layout": [1, 1, 1, 1, 1],
   "layouts": [
     {
       "panel": 1,
@@ -411,4 +398,4 @@ All three scripts are standalone CLIs invoked as `uv run scripts/<name>.py ...`.
 
 ## Story-quality 1.1 contract
 
-For each direction, record `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, `development_changes` (an array of exactly four distinct visible changes), `payoff_reversal`, and `beat_signature`. For the selected direction, also record the selected engine, selected beat signature, and selected hook promise. Automatic selection records the source-relevance, human-observation, behavioral-contradiction, named-engine, hook/payoff-seed, safety, and duplicate gate outcomes before scoring; high scores cannot override an ineligible result. A direct user topic records that scout was skipped. Exactly three directions must cover at least two humor engines; StoryCritic records premise and script stages and no more than two total rewrites. Treat matching beat signatures or payoffs as hard duplicates. Do not record profanity or obfuscated profanity in generated story text; rough non-profane Korean is allowed.
+For each direction, record `human_truth`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_promise`, one or more distinct visible `development_changes`, `payoff_reversal`, and `beat_signature`. WriterAgent realizes one change per selected inner panel. For the selected direction, also record the selected engine, selected beat signature, and selected hook promise. Automatic selection records the source-relevance, human-observation, behavioral-contradiction, named-engine, hook/payoff-seed, safety, and duplicate gate outcomes before scoring; high scores cannot override an ineligible result. A direct user topic records that scout was skipped. Exactly three directions must cover at least two humor engines; StoryCritic records premise and script stages and no more than two total rewrites. Treat matching beat signatures or payoffs as hard duplicates. Do not record profanity or obfuscated profanity in generated story text; rough non-profane Korean is allowed.

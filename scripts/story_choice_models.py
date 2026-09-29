@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, ClassVar, Literal, Self, assert_never
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 from pydantic_core import PydanticCustomError
 
 
@@ -111,8 +112,50 @@ class SensitivityCheckModel(StrictModel):
     result: Literal["pass", "review"]
 
 
+class FactSourceModel(StrictModel):
+    url: AnyHttpUrl
+    title: NonBlankString
+    publisher: NonBlankString
+    checked_on: date
+    supporting_excerpt: NonBlankString
+
+
+class RequiredFactModel(StrictModel):
+    id: NonBlankString
+    claim: NonBlankString
+    category: Literal["identity", "relevance", "benefit", "condition", "risk", "uncertainty"]
+    sources: Annotated[tuple[FactSourceModel, ...], Field(min_length=1)]
+
+
+class QuestionAnswerModel(StrictModel):
+    search_keyword: NonBlankString
+    reader_question: NonBlankString
+    one_line_answer: NonBlankString
+    required_facts: Annotated[tuple[RequiredFactModel, ...], Field(min_length=1)]
+    reader_action: NonBlankString
+    out_of_scope: Annotated[tuple[NonBlankString, ...], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def unique_facts(self) -> Self:
+        ids = [fact.id for fact in self.required_facts]
+        if len(ids) != len(set(ids)):
+            raise ValueError("required_facts must have unique IDs")
+        return self
+
+
+class InformationalDirectionModel(StrictModel):
+    id: NonBlankString
+    premise: NonBlankString
+    hook_promise: NonBlankString
+    development_changes: Annotated[tuple[NonBlankString, ...], Field(min_length=1)]
+    ending_answer: NonBlankString
+
+
 class BriefModel(StrictModel):
-    schema_version: Literal["1.0", "1.1"]
+    schema_version: Literal["1.0", "1.1", "1.2"]
+    content_type: Literal["humor", "informational"] = "humor"
+    question_answer: QuestionAnswerModel | None = None
+    additional_direction_reason: NonBlankString | None = None
     episode_id: str
     title: str
     topic: str
@@ -121,8 +164,8 @@ class BriefModel(StrictModel):
     tone: str
     characters: tuple[str, ...]
     directions: Annotated[
-        tuple[DirectionModel | RichDirectionModel, ...],
-        Field(min_length=3, max_length=3),
+        tuple[DirectionModel | RichDirectionModel | InformationalDirectionModel, ...],
+        Field(min_length=1, max_length=3),
     ]
     selected_direction: str
     duplicate_check: DuplicateCheckModel
@@ -136,6 +179,12 @@ class BriefModel(StrictModel):
 
     @model_validator(mode="after")
     def validates_schema_specific_direction_contract(self) -> Self:
+        if self.schema_version == "1.2":
+            return self._validate_informational()
+        if self.content_type != "humor" or self.question_answer is not None:
+            raise ValueError("informational briefs require schema 1.2")
+        if len(self.directions) != 3:
+            raise ValueError("legacy humor briefs require exactly three directions")
         if self.schema_version == "1.0":
             if self.output_layout is not None:
                 raise PydanticCustomError(
@@ -200,7 +249,7 @@ class BriefModel(StrictModel):
             case StoryQualityDirectionModel() as story_quality_selected:
                 selected_engine = story_quality_selected.humor_engine_id
                 selected_signature = story_quality_selected.beat_signature
-            case DirectionModel():
+            case DirectionModel() | InformationalDirectionModel():
                 raise PydanticCustomError(
                     "brief_directions",
                     "brief schema 1.1 requires story-quality directions",
@@ -216,4 +265,24 @@ class BriefModel(StrictModel):
                 "selected_direction",
                 "selected beat signature must match selected direction",
             )
+        return self
+
+    def _validate_informational(self) -> Self:
+        if self.content_type != "informational" or self.question_answer is None:
+            raise ValueError("schema 1.2 requires informational content and question_answer")
+        if self.output_layout is None or sum(self.output_layout) < 3:
+            raise ValueError("informational briefs require an output_layout with at least three panels")
+        if any(value is not None for value in (self.selected_humor_engine_id, self.selected_beat_signature)):
+            raise ValueError("informational briefs must not use legacy humor metadata")
+        if len(self.directions) > 1 and self.additional_direction_reason is None:
+            raise ValueError("additional informational directions require a reason")
+        ids = [direction.id for direction in self.directions]
+        if len(ids) != len(set(ids)) or self.selected_direction not in ids:
+            raise ValueError("selected_direction must name one unique direction")
+        for direction in self.directions:
+            if not isinstance(direction, InformationalDirectionModel):
+                raise ValueError("informational briefs require informational directions")
+            changes = direction.development_changes
+            if len(changes) != sum(self.output_layout) - 2 or len(changes) != len(set(changes)):
+                raise ValueError("informational directions require a distinct change per inner panel")
         return self

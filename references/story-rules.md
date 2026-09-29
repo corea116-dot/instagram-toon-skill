@@ -1,6 +1,10 @@
 # Story Rules
 
-## Layout-driven story structure
+## Content-type boundary
+
+For brief 1.2 information, use `informational-workflow.md`: one sourced question-answer card and direction, information-changing inner panels, ending answer/action, one integrated independent content review. Humor engines, three directions, hidden ending, payoff reversal and separate dialogue gate below apply only to humor. Shared dialogue geometry, language, originality and safety still apply; helpful explanations are allowed in information. Caption is supplementary, never the only place holding a core answer or material condition.
+
+## Layout-driven story structure (humor)
 
 1. **Opening hook:** Stop the scroll with an immediately legible visual situation, one concise line, or both. Create curiosity or instant recognition without explaining the setup or spoiling the ending.
 2. **Development beats:** Use one state-changing beat for each inner panel. Establish, escalate, complicate, or turn the expectation as the selected panel count needs.

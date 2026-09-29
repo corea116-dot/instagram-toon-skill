@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import assert_never
 
-from pydantic import ValidationError
-
 from episode_models import BriefModel
+from keyword_history import ResearchVersion
+from keyword_models import keyword_research_adapter
+from pydantic import ValidationError
 from topic_research_models import TopicResearchModel
 
 
@@ -41,15 +42,28 @@ def topic_research_issues(episode_dir: Path) -> tuple[str, ...]:
             pass
         case _ as unreachable:
             assert_never(unreachable)
-    if brief.schema_version != "1.1":
+    if brief.schema_version not in ("1.1", "1.2"):
         return (
-            f"editorial_scout episodes require brief schema 1.1: {brief_path}",
+            f"editorial_scout episodes require brief schema 1.1 or 1.2: {brief_path}",
         )
     path = episode_dir / "topic-research.json"
     if not path.is_file():
         return ()
     try:
-        research = TopicResearchModel.model_validate_json(path.read_text(encoding="utf-8"))
+        raw = path.read_text(encoding="utf-8")
+        if ResearchVersion.model_validate_json(raw).schema_version in ("1.2", "1.3"):
+            keyword_research = keyword_research_adapter.validate_json(raw)
+            if (
+                keyword_research.schema_version == "1.3"
+                and brief.content_type != "informational"
+            ):
+                return (f"informational topic research requires an informational brief: {path}",)
+            if keyword_research.decision.status != "selected":
+                return (f"held keyword research cannot proceed to an episode: {path}",)
+            if brief.topic != keyword_research.selected_topic:
+                return (f"topic-research selected topic does not match brief topic: {path}",)
+            return ()
+        research = TopicResearchModel.model_validate_json(raw)
     except (OSError, ValidationError) as error:
         return (f"invalid structured file {path}: {error}",)
     if research.schema_version != "1.1":

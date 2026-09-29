@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from content_review import require_content_review
 from composition_state import load_script, merge_layouts, require_complete_composition
 from delivery import (
     clear_obsolete_delivery_exports,
@@ -185,6 +186,10 @@ def _preflight_partial(episode_dir: Path, script: EpisodeScriptModel) -> None:
 
 
 def compose(options: ComposeOptions) -> Path:
+    try:
+        require_content_review(options.episode_dir)
+    except ValueError as exc:
+        raise RenderError(str(exc)) from exc
     script = load_script(options.episode_dir)
     character_policy = load_character_policy(
         options.episode_dir, CHARACTER_BIBLE_PATH, SKILL_ROOT

@@ -27,6 +27,7 @@ from pydantic import ValidationError
 import typer
 
 from delivery import delivery_paths
+from content_review import content_review_issues
 from language_policy import (
     hard_banned_issues,
     language_policy_issues,
@@ -259,6 +260,7 @@ def validate_episode(episode_dir: Path) -> tuple[Path, tuple[str, ...]]:
     issues = (
         missing
         + _check_models(episode_dir)
+        + content_review_issues(episode_dir)
         + _check_brief_script_layout(episode_dir)
         + hard_banned_issues(episode_dir)
         + language_policy_issues(episode_dir)

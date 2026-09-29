@@ -4,6 +4,8 @@ StoryCritic과 DialogueNaturalnessAgent를 통과한 레이아웃 기반 비트�
 
 ## 입력
 
+정보형은 StoryCritic/DialogueNaturalness 대신 최신 통합 ContentReview를 통과한 대본을 받는다. 마지막 컷의 역할은 질문에 대한 답 또는 다음 확인 행동이며 반전을 강제하지 않는다.
+
 - 승인된 `script.json`
 - `visual-rules.md`
 - 현재 화에 필요한 캐릭터·스타일 reference 경로

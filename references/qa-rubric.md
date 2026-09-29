@@ -1,6 +1,12 @@
 # QA Rubric
 
-## EditorialScoutAgent
+## Informational review
+
+Use the six evidence-backed checks and two ordered reviewer inputs in `informational-workflow.md`. One independent reviewer replaces the separate premise/script/dialogue/continuity roles below. No required numeric score or humor. Generic money advice that omits the selected product's identity, benefit conditions or risk must fail. Test the unaided reader's answer against the actual card and claims; a recorded PASS is not proof of meaning by itself. Any changed brief/script invalidates approval until affected content is reviewed again.
+
+For both routes, inspect final pages in reading order; inspect raw only for suspected defects. Keep visual and cheap deterministic safeguards below. The public-engagement ranking below is historical only; current keyword search uses `keyword-evidence.md`, never likes or a local fabricated fallback.
+
+## EditorialScoutAgent (legacy public-engagement humor)
 
 Run this gate only when `brief.json.topic_origin` is `editorial_scout`. It is not a substitute for StoryCriticAgent. Before any score, require source relevance for the concrete observation, a one-sentence contradiction, an explicit humor engine, visual hookability, payoff pressure, and safety/originality. Record every failed candidate among the exactly five, mark it ineligible, and never select it regardless of score. The five candidates must contain at least three distinct primary humor engines.
 

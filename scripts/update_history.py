@@ -4,6 +4,7 @@
 # dependencies = [
 #     "pydantic>=2.12",
 #     "typer>=0.20",
+#     "pillow>=12.0",
 # ]
 # ///
 
@@ -30,9 +31,11 @@ from pathlib import Path
 from typing import Annotated, ClassVar, Literal, TypeVar, override
 
 import typer
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
-
+from content_review import require_content_review
 from episode_models import EpisodeScriptModel
+from keyword_history import KeywordCompletion, completion_for_episode
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic_core import PydanticCustomError
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HISTORY = SKILL_ROOT / "memory" / "episode-history.json"
@@ -47,7 +50,8 @@ class _EpisodeStatus(StrEnum):
 class _BriefModel(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
-    schema_version: Literal["1.0", "1.1"]
+    schema_version: Literal["1.0", "1.1", "1.2"]
+    content_type: Literal["humor", "informational"] = "humor"
     episode_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     topic: str = Field(min_length=1)
@@ -58,6 +62,7 @@ class _BriefModel(BaseModel):
     selected_humor_engine_id: str | None = None
     selected_beat_signature: str | None = None
     hook_mode: str | None = None
+    topic_origin: str = "user"
 
 
 class _HistoryEntryModel(BaseModel):
@@ -72,9 +77,11 @@ class _HistoryEntryModel(BaseModel):
     path: str = Field(min_length=1)
     created_at: str = Field(min_length=1)
     status: _EpisodeStatus
+    content_type: Literal["humor", "informational"] = "humor"
     humor_engine_id: str | None = None
     beat_signature: str | None = None
     hook_mode: str | None = None
+    keyword_selection: KeywordCompletion | None = None
 
 
 class _HistoryModel(BaseModel):
@@ -120,7 +127,23 @@ def _update_history(
 ) -> Path:
     brief = _read_model(episode_dir / "brief.json", _BriefModel)
     script = _read_model(episode_dir / "script.json", EpisodeScriptModel)
+    try:
+        require_content_review(episode_dir)
+    except ValueError as error:
+        raise _EpisodeDataError(f"content review blocked history: {error}") from error
     history = _read_model(history_path, _HistoryModel)
+    try:
+        keyword_selection = completion_for_episode(episode_dir, brief.topic_origin)
+    except (OSError, ValidationError, PydanticCustomError) as error:
+        raise _EpisodeDataError(f"keyword completion blocked: {error}") from error
+    if brief.content_type == "informational" and keyword_selection is None:
+        from validate_episode import validate_episode
+
+        _, issues = validate_episode(episode_dir)
+        if issues:
+            raise _EpisodeDataError(
+                "informational completion blocked: " + "; ".join(issues)
+            )
 
     if brief.episode_id != script.episode_id:
         detail = (
@@ -162,9 +185,11 @@ def _update_history(
         path=stored_path,
         created_at=created_at,
         status=status,
+        content_type=brief.content_type,
         humor_engine_id=brief.selected_humor_engine_id,
         beat_signature=brief.selected_beat_signature,
         hook_mode=brief.hook_mode,
+        keyword_selection=keyword_selection,
     )
 
     entries: list[_HistoryEntryModel] = []
@@ -190,9 +215,11 @@ def _update_history(
                     "characters": incoming.characters,
                     "path": incoming.path,
                     "status": incoming.status,
+                    "content_type": incoming.content_type,
                     "humor_engine_id": incoming.humor_engine_id,
                     "beat_signature": incoming.beat_signature,
                     "hook_mode": incoming.hook_mode,
+                    "keyword_selection": incoming.keyword_selection or entry.keyword_selection,
                 },
             ),
         )
@@ -203,7 +230,7 @@ def _update_history(
     updated = history.model_copy(
         update={
             "schema_version": "1.1"
-            if brief.schema_version == "1.1"
+            if brief.schema_version in ("1.1", "1.2")
             else history.schema_version,
             "episodes": tuple(entries),
         }

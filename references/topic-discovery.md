@@ -1,102 +1,93 @@
-# Topic Discovery
+# Keyword Topic Discovery
 
-Use this contract only for a new `$instagram-toon` request with no user-supplied topic. It runs once as part of that request; it is not a background monitor or scheduled research process.
+Use for requested topic search or new episodes without a fixed topic. Information uses evidence 1.1 → research 1.3; humor uses evidence 1.0 → research 1.2. Historical records remain valid under their original rules. Direct topics are never replaced.
 
-## Inputs and defaults
+## Audience, goal, and rotation
 
-Read the current conversation, `memory/brand-bible.md`, `memory/banned-topics.json`, `memory/episode-history.json`, `memory/character-bible.json`, and `references/story-rules.md` before searching.
+Read the conversation, `memory/brand-bible.md`, `memory/banned-topics.json`, `memory/episode-history.json`, `memory/character-bible.json`, and `references/story-rules.md` first. Use explicit user constraints when present; the automatic-search defaults are:
 
-When the user did not supply other brief fields, use the established defaults: audience `일상 공감 독자`, tone `가벼운 공감 유머`, and character `bgoon`. Reuse any more specific values already present in the conversation or project. Never use employment status or workplace experience as a default audience, discovery filter, or score condition.
+- Audience: **20–30대 사회초년생**.
+- Topic territories: **정부 지원 정책, 재테크, 경제, 주식투자, 부동산 투자뉴스**. Search across these territories unless the user limits the scope; do not force one candidate per territory when evidence favors another mix.
+- Primary outcome: **조회·신규유입**. These are shared goals, not alternating keyword types or a guarantee of future performance.
+- Tone: understandable, practical information with light relatable humor; character: `bgoon`.
+- Requested keyword type: **단기 화제성 (`trending`) ↔ 지속 수요 (`evergreen`)**, starting with `trending` when no completed automatic search episode is recorded.
 
-## ULW-research delegation and public-web boundary
+Read the next type through `topic_search.py plan`, not by calendar day or inference from the last topic. Only successful automatic keyword-search episode completions advance the rotation. Search-only runs, holds, failed collection/generation, manual-topic episodes, Instagram-link episodes, and repeated history updates do not consume another turn. Fallback changes the effective type for that run, not the requested rotation slot.
 
-For every automatic-topic invocation, EditorialScoutAgent must launch a bounded evidence-gathering subtask with an explicit `$ulw-research` prompt before it creates candidates. This is the only route that uses `$ulw-research`; a user-supplied topic and the explicit direct-Instagram-link route must not launch it.
+## Collect with Aside, decide locally
 
-Give the research task the current brand, banned-topic, episode-history, audience, tone, and character constraints. Require it to return an anonymized synthesis of general human observations and source metadata, not finished topics, dialogue, copied content, or episode files. Set its source priority as follows:
+Read `aside-browser` and run its current `aside guide` before using the browser. Use `aside exec` for a bounded evidence-collection task. There is no mandatory `$ulw-research` stage. Aside collects observed data; the local selector normalizes scores and chooses the result. Do not ask the browser agent to invent values, choose the winner, or draft the comic.
 
-1. Normally accessible public Instagram posts, reels, and trend signals.
-2. Normally accessible public community discussions.
-3. Other public pages or official trend data only when they corroborate the first two territories or the prioritized territories have no usable safe signal.
+From the skill root:
 
-Treat the ULW-research journal, report, and other working artifacts as temporary research state. Preserve only the short source metadata and anonymized observations required by `topic-research.json`, then remove the temporary workspace.
-
-- Search only public pages and public trend data that the current Codex surface can access normally.
-- Record likes, comments, reactions, or upvotes only when the count is visibly shown on that normally accessible page. Do not log in, estimate missing counts, infer hidden counts, or compare private analytics.
-- For each candidate, derive `engagement_priority` from 0 to 100 only from its cited visible public-response evidence. Use `0` when no cited source displays a usable response count; never invent a value to favor a topic.
-- Use public material as a signal for a general daily observation, never as copyable source material.
-- Never log in, access private content, bypass restrictions, collect DMs, or reproduce a single person's post, wording, image, identity, or anecdote.
-- Prefer two independent public pages for the selected candidate. One official trend source is sufficient when it is the direct source of the signal.
-- Search the latest 30 days by default. Use older material only when it is clearly an evergreen daily observation rather than a claimed current trend.
-- If the completed ULW-research task cannot access public evidence or produces no safe candidate, make five candidates from the brand, character, and episode-history memory. Mark the result `local_fallback` and state the exact fallback reason; never skip the ULW-research task merely to use this fallback.
-
-## EditorialScoutAgent contract
-
-Use a native `researcher` role when available to coordinate the explicit `$ulw-research` task. Do not substitute generic local public-web research. Give the agent only the inputs above and this contract. It returns either one structured selection result or a user-input request; it does not write episode files, publish anything, or draft final dialogue.
-
-For a normal result, return exactly five candidates and one selected candidate. Every candidate contains:
-
-- a concise Korean `topic`;
-- `source_signal`, anonymized `human_observation`, and one-sentence `behavioral_contradiction`;
-- `humor_engine_id` and a plain-language `engine_explanation`;
-- `hook_seed`, `payoff_seed`, and an eligibility-bearing `gate_results` object;
-- a one-sentence `story_seed` describing the comic mechanism, not a finished script;
-- source IDs, unless `source_mode` is `local_fallback`;
-- `engagement_priority` from 0 to 100, backed by at least one cited source's visible public-response count when it is greater than zero;
-- five scores and their total, calculated only after the hard editorial gate.
-
-The five candidates must use at least three distinct primary `humor_engine_id` values. The palette and definitions are in `references/story-rules.md`.
-
-Score candidates out of 100:
-
-| Dimension | Points | Pass intent |
-| --- | ---: | --- |
-| Relatability | 30 | A reader can immediately recognize the everyday friction. |
-| Humor | 30 | Escalation and a fair short payoff are available. |
-| Opening hook | 20 | A visually legible first image or concise line can stop the scroll. |
-| Novelty | 10 | The comic mechanism differs from episode history. |
-| Production fit | 10 | Sparse backgrounds, few props, clear action, and the established visual style can carry it. |
-
-Select the **eligible** candidate with the highest `engagement_priority` first, then the highest total score. A candidate still needs a total of at least 75, relatability of at least 18, humor of at least 18, and opening hook of at least 12. When both priority and total tie, prefer the stronger opening hook, then the simpler drawable action. Keep the scoring and selection reason factual; never invent source evidence or response counts. `local_fallback` candidates must use priority `0`.
-
-## Hard editorial gate before scoring
-
-Evaluate every candidate before scoring. A candidate is ineligible if any gate fails; retain it in the five-candidate record with failure reasons.
-
-1. **Source relevance:** its sources support the concrete human observation, not merely the broad topic domain.
-2. **Contradiction clarity:** its behavioral mismatch fits one plain sentence.
-3. **Comic mechanism:** its engine and how it creates the joke are explicit.
-4. **Visual hookability:** a text-free or one-line first image is plausible.
-5. **Payoff pressure:** a short reversal exists; “something happens” is not enough.
-6. **Safety and originality:** banned material is absent and no history entry materially matches the beat signature or payoff.
-
-Also reject a candidate before scoring when it:
-
-- violates `hard_banned` rules;
-- needs the `review_required` treatment and cannot be reframed safely;
-- materially duplicates a stored beat signature or payoff (an engine match alone only lowers novelty);
-- lacks the required public source support in `public_web` mode;
-- depends on a real person's identity, a brand claim, a copied post, or a copyrighted character.
-
-If no candidate passes, return this coordinator-only JSON and stop before writing an episode:
-
-```json
-{
-  "outcome": "requires_user_input",
-  "reason": "why all candidates failed",
-  "safe_alternatives": ["optional short alternatives"]
-}
+```bash
+uv run scripts/topic_search.py plan --history memory/episode-history.json
+uv run scripts/topic_search.py schema --output /absolute/project/keyword-evidence.schema.json
 ```
 
-The coordinator asks one short question only in that case. Otherwise it does not wait for topic approval: it records the selection and continues to IdeaAgent, WriterAgent, art, and QA.
+Read `references/keyword-evidence.md` for the exact input contract. Give Aside the requested type, audience/topic filters, banned/duplicate constraints, the evidence schema, and a short task along these lines:
 
-## Episode record
+> Read-only research for five Korean keyword candidates serving 20–30대 사회초년생. Collect comparable Naver and Google search-demand evidence, retaining the exact displayed value, unit, region, time window, access time, source URL, and limitations. Prefer actual monthly volumes already normally accessible; otherwise use comparable Naver DataLab/Google Trends relative indices or observed related-keyword ranks. Inspect official sources for policy/financial facts and dated timely triggers. Return observations and missing-data reasons, not a fabricated popularity estimate or winner. Do not register, log in, change account/settings, create ads, enable an API, pay, publish, or upload user files. Do not access private analytics or bypass restrictions.
 
-For an automatic selection, set `brief.json.topic_origin` to `editorial_scout` and write `topic-research.json` before writing the final brief. Its schema is defined in `references/output-schema.md` and validated by `scripts/validate_episode.py`.
+Use `aside exec --permission guard` if supported by the current guide, with the scoped prompt above. `guard` is not itself a read-only guarantee; the task boundary still forbids external writes. Browser state may already permit a normal public view, but do not create new accounts or authorize spend to obtain data. API setup is not a prerequisite. If Aside is unavailable, report it; installation or a materially different collector requires the user's direction.
 
-For a user-supplied topic, set `topic_origin` to `user`, do not call EditorialScoutAgent, and do not require `topic-research.json`. The user topic wins even if a current trend looks more attractive.
+Preserve only short observations, source metadata, and the evidence needed to reproduce the comparison. No copied posts, images, personal anecdotes, or private account data. The coordinator writes `keyword-evidence.json`; the collector does not modify skill memory or episode history.
 
-Under `## Agent QA` in `qa-report.md`, record the source mode, selected candidate ID, score total, selection reason, duplicate check, sensitivity check, and whether a local fallback was used. Store only short observations and source metadata, never copied source text or images.
+## Evidence and scoring rules
 
-## Story-quality gate (schema 1.1)
+Collect **exactly five real candidates** with the content-type-specific fields in `references/keyword-evidence.md`. Information candidates compare demand, reader question, audience fit, official support, safety and duplication; do not draft five detailed stories. Include rejected candidates/reasons. Never fabricate missing candidates; fewer than five means preserve partial research and hold.
 
-Before scoring, every candidate must pass: source relevance, a concrete human observation, behavioral contradiction, humor engine, hook seed, payoff seed, safety pass, and duplicate pass. Generate 5 candidates using 3+ humor engines in total; choose the highest-scoring eligible candidate. Matching beat signatures or payoffs are hard duplicates.
+For each platform, use the highest-quality complete and comparable basis available for the five-candidate cohort:
+
+1. Actual displayed monthly search volume, when all compared values share the same counting definition, period, region, and unit. A range, `<10`, or forecast is not an exact count.
+2. Comparable relative indices from Naver DataLab or Google Trends, using a shared comparison/window. Separately normalized charts are not automatically comparable.
+3. Actually observed related-keyword ranks, with a comparable ranking context and limitations recorded. Autocomplete position is a weak signal, not monthly search volume.
+
+Do not mix raw counts, indices, rank positions, social likes, or search-result page counts. Missing evidence is not zero demand. If neither a complete comparable basis nor the permitted fallback is available for **either** platform, hold instead of silently dropping it or redistributing the weights.
+
+The selector converts each platform's comparable ranks into a 0–100 percentile, using average ranks for ties, then calculates **Naver score × 0.6 + Google score × 0.4**. It retains the selected basis and original measurements. These are relative scores **within the observed candidate set**, not proof that a topic has the largest search volume on the whole platform. Label a mixed or proxy comparison as relative evidence; claim exact monthly volume only for the actual observed count and its period.
+
+Keyword score is primary after eligibility and requested-type/fallback filtering. Information ties use ascending candidate ID; humor ties use story score, hook and ID. Use the selector result, not an agent's preferred winner. High demand cannot rescue failed gates.
+
+## Timely and evergreen selection
+
+For a `trending` slot, use eligible candidates in this order:
+
+1. A measured rise supported by comparable recent/prior observations.
+2. If none qualifies, an official event: an official announcement in the last 30 days or a confirmed upcoming application/event date within 30 days. Record the exact official URL and dates; do not describe an event-driven choice as a proven search surge.
+3. If neither qualifies, an eligible `evergreen` candidate with comparable demand evidence. Record why the timely choices could not be used.
+
+For an `evergreen` slot, choose an eligible persistent-demand candidate. Do not infer persistence from a one-day spike or an upcoming deadline alone. Evidence windows and the basis for the classification must be retained.
+
+For selected policy, financial, economy, or investing information, verify claims against relevant official sources: agencies/program notices, regulators, official disclosures, exchange data, or issuer documentation as appropriate. Check dates, eligibility, exclusions, and whether an announcement is final. A news headline or search suggestion alone is not enough to assert an application schedule, benefit, return, or eligibility. No guaranteed-return framing, personalized buy/sell instruction, or invented deadline.
+
+## Information eligibility
+
+Evidence 1.1 has `content_type: informational` and four gates: `audience_fit`, `source_relevance`, `safety`, `duplicate`. All must pass and official supporting sources must resolve. It has no humor engine, hook/payoff seed or story score. Elaborate the selected question into a brief 1.2 question-answer card only after selection. See `informational-workflow.md`.
+
+## Preserve the existing story gates (humor evidence 1.0 only)
+
+Each candidate retains `source_signal`, `source_relevance`, a concrete anonymized `human_observation`, one-sentence `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_seed`, `payoff_seed`, `beat_signature`, `story_seed`, source IDs, `eligibility`, and all eight `gate_results`. Use at least three distinct primary humor engines across the five candidates.
+
+Before score-based selection, require source relevance, human observation, behavioral contradiction, explicit humor mechanism, visual hook, short payoff, safety, and duplicate checks. Failed gates make the candidate ineligible and stay visible in the record. Matching beat signatures or payoffs are hard duplicates; matching an engine alone is not.
+
+Retain the existing story score: relatability 0–30, humor 0–30, opening hook 0–20, novelty 0–10, production fit 0–10. A selected candidate needs total ≥75, relatability ≥18, humor ≥18, and hook ≥12. This score is a quality gate/tiebreak, not the demand metric.
+
+## Select, hand off, or hold
+
+Run the local selector after the evidence has been assembled:
+
+```bash
+uv run scripts/topic_search.py select \
+  --evidence /absolute/project/keyword-evidence.json \
+  --output /absolute/project/topic-research.json \
+  --history memory/episode-history.json
+```
+
+Keep the generated `evidence` and `decision` together. Do not hand-edit computed scores, selected ID, requested/effective type, or fallback reasons. A malformed input is a collection/contract error to correct from actual evidence; it is not permission to invent measurements.
+
+- **Selected, search-only:** show the topic, five-candidate ranking, evidence strength, reason, and file paths; stop before story modules/IdeaAgent and do not update history.
+- **Selected, full episode:** retain the record in the episode, set `topic_origin: editorial_scout` and use the exact topic. Information continues with brief 1.2 and `informational-workflow.md`; humor keeps brief 1.1 and the existing story route.
+- **Hold or unavailable collection:** show the exact missing evidence or failed gates and preserve available research. Stop before script/art and leave history unchanged. Do not use memory-only candidates as a successful search result.
+
+At full-generation completion, record search evidence strength, source windows, requested/effective type, fallback, selected keyword/topic, weighted score, story gates, and official-fact checks in `## Agent QA`. After all required QA succeeds, write `review-state.json` according to `references/keyword-evidence.md`, then update history once. Leave the local draft at **검수 대기 (`review_pending`)**. No upload, publication, scheduler creation, or automatic approval is authorized by this workflow.

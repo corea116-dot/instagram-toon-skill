@@ -1,6 +1,12 @@
 # Output Contracts
 
-All JSON files use UTF-8, two-space indentation, and a trailing newline. New story-choice, script, and composition artifacts use `"schema_version": "1.1"`; historical 1.0 artifacts remain readable. Paths stored in JSON are relative to the skill root. PNG files are 1080x1350 pixels.
+All JSON files use UTF-8, two-space indentation and a trailing newline. Informational brief is 1.2; humor brief, script and composition are 1.1. Historical contracts remain readable. Asset paths in JSON are relative to the skill root. PNG files are 1080x1350 pixels.
+
+## Informational artifacts (brief 1.2)
+
+See `informational-workflow.md` for the exact question-answer, direction and independent `content-review.json` fields. `BriefModel` in `story_choice_models.py` is the executable contract. Set `content_type: informational`, `question_answer`, one information direction, `selected_direction`, the normal audience/topic/characters/checks/status and requested `output_layout`. Additional directions require `additional_direction_reason`. Do not add fake selected humor metadata. Script stays 1.1; `ending_payoff` is an answer/action here. Optional modules need the routing record only when the policy is enabled.
+
+Information search uses evidence 1.1/research 1.3 (`keyword-evidence.md`), not the legacy examples below. Information completion additionally requires current passed `content-review.json`; composition, validation and history reject missing/stale/failed approval. QA report summarizes that file instead of copying it. History records the content type; its compatibility field `twist` contains the actual ending dialogue, not an invented joke. Question/answer stays in brief. The three-direction and StoryCritic requirements below describe humor only.
 
 ## Contents
 
@@ -46,7 +52,7 @@ For every new episode, `final/` contains one postable 1080x1350 `page-NN.png` pe
 
 ## `brief.json`
 
-Required keys:
+Humor schema 1.1 example (information uses the contract above):
 
 ```json
 {
@@ -116,7 +122,21 @@ Module IDs, statuses, modes, counts, nonblank reasons, complete registry, and bu
 
 ## `topic-research.json`
 
-Write this file only when `brief.json.topic_origin` is `editorial_scout`. It records why the skill selected a topic during the current invocation; it is not a cache of copied web content. It must contain exactly five candidates using at least three primary humor engines. A candidate may be selected only when it is eligible and has the highest `engagement_priority` among eligible candidates, then the highest score when priorities tie.
+For full episodes, this file is required when `brief.json.topic_origin` is `editorial_scout`. Search-only runs may produce it without a brief. It records source-backed selection, not copied web content. Both formats below retain exactly five candidates using at least three primary humor engines; the appropriate schema determines the demand ranking rules.
+
+### Keyword-search schema 1.2 (new automatic selections)
+
+Read `references/keyword-evidence.md` and generate the current machine-readable input schema with `uv run scripts/topic_search.py schema`. The collector's input is `keyword-evidence.json`; the deterministic selector writes `topic-research.json` with `schema_version: "1.2"`, the full `evidence`, and the computed `decision`. Do not adapt the legacy example below by merely changing its version number.
+
+The record preserves five keyword/story candidates, observed Naver/Google measurements, evidence methods, matching comparison cohorts and windows, dates/URLs, requested and effective keyword type, chosen per-platform basis, normalized scores, weighted ranking, selected ID/reason, rejected-candidate reasons, fallback, or hold. Exact counts, relative indices, and related ranks remain distinguishable. The ranking uses each platform's own comparable rank percentile, then Naver 60% + Google 40%; social `engagement_priority` does not choose a 1.2 winner. A missing complete comparable basis on either platform is a hold, not zero demand or permission to change the weights.
+
+Use `topic_search.py plan --history memory/episode-history.json` to read rotation state and `topic_search.py select --evidence ... --output ... --history ...` to generate the result. Keep the brief at schema 1.1 with `topic_origin: editorial_scout` and the exact selected topic. A held result cannot enter script/art generation. Search-only or failed runs do not update history.
+
+A completed 1.2 episode also keeps its original `keyword-evidence.json` and a `review-state.json` binding `review_pending` and the required agent-QA passes to the SHA-256 of `topic-research.json`. The exact review-state fields and history marker are in `references/keyword-evidence.md`. The history updater verifies completion before adding one keyword-rotation marker per episode ID; this does not approve or publish the draft.
+
+### Public-engagement schema 1.1 (historical episodes)
+
+The following contract remains readable and valid for historical public-engagement selections. Do not use it for a new keyword-search run. Under this legacy contract, a candidate may be selected only when it is eligible and has the highest `engagement_priority` among eligible candidates, then the highest story score when priorities tie.
 
 ```json
 {
@@ -238,7 +258,7 @@ Write this file only when `brief.json.topic_origin` is `editorial_scout`. It rec
 }
 ```
 
-Every 1.1 candidate records the complete evidence shape shown for `candidate-1`: `source_signal`, `source_relevance`, `human_observation`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_seed`, `payoff_seed`, `beat_signature`, `eligibility`, and exactly the eight boolean `gate_results` keys. `eligibility` equals the conjunction of those gates; incomplete, renamed, or extra gate keys are invalid. Every candidate remains in the array even if ineligible. Score ranges are relatability 0–30, humor 0–30, opening hook 0–20, novelty 0–10, and production fit 0–10. Scores are calculated only after hard gates; the selected eligible total must be at least 75, with relatability at least 18, humor at least 18, and opening hook at least 12. A `public_web` selection needs two cited `public_page` sources or one cited `official_trend` source. A `local_fallback` selection has no web sources or candidate source IDs and instead has a nonempty `fallback_reason`. Historical 1.0 research remains readable, but `editorial_scout` validation requires both a 1.1 brief and 1.1 research record.
+Every 1.1 candidate records the complete evidence shape shown for `candidate-1`: `source_signal`, `source_relevance`, `human_observation`, `behavioral_contradiction`, `humor_engine_id`, `engine_explanation`, `hook_seed`, `payoff_seed`, `beat_signature`, `eligibility`, and exactly the eight boolean `gate_results` keys. `eligibility` equals the conjunction of those gates; incomplete, renamed, or extra gate keys are invalid. Every candidate remains in the array even if ineligible. Score ranges are relatability 0–30, humor 0–30, opening hook 0–20, novelty 0–10, and production fit 0–10. Scores are calculated only after hard gates; the selected eligible total must be at least 75, with relatability at least 18, humor at least 18, and opening hook at least 12. A `public_web` selection needs two cited `public_page` sources or one cited `official_trend` source. A `local_fallback` selection has no web sources or candidate source IDs and instead has a nonempty `fallback_reason`. Historical 1.0 research remains readable, but `editorial_scout` episode validation requires a 1.1 brief and a valid 1.1 legacy or 1.2 keyword research record.
 
 `engagement_priority` is an integer from 0 to 100. A positive value requires at least one cited source with an `engagement` object containing one or more visibly shown `likes`, `comments`, `reactions`, or `upvotes` counts; a missing count is never estimated. The selected eligible candidate must first have the highest engagement priority, then the highest total score. A `local_fallback` selection uses engagement priority `0` for every candidate.
 
@@ -394,7 +414,7 @@ Include episode path, validation timestamp, premise-stage verdict, script score 
 
 ## CLI behavior
 
-All three scripts are standalone CLIs invoked as `uv run scripts/<name>.py ...`. They print one clear result path to stdout on success. Invalid arguments, malformed input, or failed checks produce a concise message naming the affected file on stderr and exit with a nonzero status. Provider credentials are never required for `--mock`.
+The composition, validation, and history scripts are standalone CLIs invoked as `uv run scripts/<name>.py ...`. They print one clear result path to stdout on success. Invalid arguments, malformed input, or failed checks produce a concise message naming the affected file on stderr and exit with a nonzero status. Provider credentials are never required for `--mock`. The keyword-search CLI provides `plan`, `schema`, and `select`; its input, output, and hold behavior are documented in `references/keyword-evidence.md`.
 
 ## Story-quality 1.1 contract
 

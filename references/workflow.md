@@ -2,6 +2,10 @@
 
 Use this workflow inside Codex Desktop, Codex CLI, or an IDE extension. Do not build or require a separate web application. The current Codex agent is the coordinator; delegate bounded specialist work to native Codex subagents and show progress, revision reasons, and QA results in the chat.
 
+## Route by content type
+
+For policy/finance/economy/investing/news, follow `informational-workflow.md` instead of sections 2–3's humor roles. Use brief 1.2, script 1.1, evidence 1.1/research 1.3. Keep request/link/privacy and composition/file safeguards. Information has one independent content review, not separate premise/Story/Dialogue/Continuity passes. Modules are optional; policy marker is required only when opting into routing. Remaining three-direction/engine/score rules describe the preserved humor route. Resolve references once per generation batch (refresh on changes/new batch), inspect final pages in order, and inspect raw only for suspected defects.
+
 ## Contents
 
 - [Resolve the brief](#1-resolve-the-brief)
@@ -27,7 +31,9 @@ Run `InstagramPostAnalystAgent` first if the current request was explicitly invo
 
 When the Instagram-link route did not activate and the user supplies a topic, set `brief.json.topic_origin` to `user`, use the supplied topic, and bypass EditorialScoutAgent completely. Never replace a user topic with a trend.
 
-When the user invokes `$instagram-toon` without a topic, set `brief.json.topic_origin` to `editorial_scout`, read `references/topic-discovery.md`, and run EditorialScoutAgent before IdeaAgent. It must invoke `$ulw-research` for evidence gathering during that invocation, prioritizing normally accessible public Instagram signals and public community discussions. It must hard-gate exactly five candidates before scoring, use at least three primary humor engines, select the eligible candidate with the highest cited visible-engagement priority and then the highest story score, write 1.1 `topic-research.json`, and continue without waiting. Infer omitted audience, tone, and characters from memory; use the discovery reference defaults when needed. Ask the user only when no safe candidate passes or a sensitive ambiguity remains.
+When asked to search/select a topic or create a new episode without a fixed topic, set `brief.json.topic_origin` to `editorial_scout`, read `references/topic-discovery.md` and `references/keyword-evidence.md`, and run EditorialScoutAgent before IdeaAgent. Its Aside collection and deterministic `topic_search.py` selection replace public-engagement scouting for new automatic records. The defaults are 20–30대 사회초년생, the agreed policy/finance/economy/investing territories, and 조회·신규유입. It preserves the five-candidate/three-engine story gates while ranking comparable Naver/Google search evidence at 60%/40%. Write schema 1.2 `topic-research.json`; the brief remains schema 1.1. A missing-evidence hold ends before IdeaAgent without changing history. On a valid selection, continue without another topic interview unless the user requested search-only.
+
+For `주제 검색만` or equivalent search-only requests, return the evidence, ranking, and selected topic or hold reason, then stop. Do not route story modules, draft scripts, generate images, or update history. A broad category constraint is a search filter; a fixed user topic still bypasses the scout.
 
 Never repeat a question whose answer is already available. Read the memory files before drafting. Use `memory/episode-history.json` to choose the next `EP-NNN` identifier and detect duplicate premises.
 
@@ -48,7 +54,7 @@ Treat the specialist names below as task contracts, not custom `agent_type` valu
 | Specialist contract | Native role |
 | --- | --- |
 | InstagramPostAnalystAgent | `researcher` or `vision` |
-| EditorialScoutAgent | `researcher` coordinating an explicit `$ulw-research` task |
+| EditorialScoutAgent | `researcher` collecting with Aside; coordinator runs the deterministic selector |
 | IdeaAgent | `analyst` or `writer` |
 | WriterAgent | `writer` |
 | ContinuityAgent | `verifier` |
@@ -65,9 +71,13 @@ Run only after the explicit one-link gate passes. Read one public linked post wi
 
 ### EditorialScoutAgent
 
-Run only for a new invocation with no user topic. Read `references/topic-discovery.md`, `memory/brand-bible.md`, `memory/banned-topics.json`, `memory/episode-history.json`, and the current brief defaults. Delegate the research subtask with an explicit `$ulw-research` prompt; do not replace it with generic local browsing. Scope that task to public material only, with source priority of (1) normally accessible public Instagram posts, reels, and trend signals, then (2) normally accessible public community discussions, and finally (3) other public or official trend sources only when corroboration or availability requires them. Do not log in, scrape restricted material, bypass access controls, or copy a person's post, wording, image, identity, or anecdote. The research task returns only an anonymized source synthesis; EditorialScoutAgent turns that synthesis into the five candidates and removes any temporary research workspace after retaining the required `topic-research.json` metadata.
+Run only within a requested topic-search or new-episode run with no fixed user topic. Read `references/topic-discovery.md`, `references/keyword-evidence.md`, the banned-topic/history/brand constraints, and `aside-browser` with its current guide. The coordinator first runs `topic_search.py plan --history memory/episode-history.json` to derive the next requested `trending` or `evergreen` slot. Only successfully completed automatic keyword-search episodes advance that slot; retries, failures, search-only runs, and manual topics do not.
 
-Return exactly five candidates and one selected candidate matching 1.1 `topic-research.json`. Before scoring, each candidate must pass source relevance for its concrete observation, contradiction clarity, explicit comic mechanism, visual hookability, payoff pressure, and safety/originality. Keep failed candidates with reasons but make them ineligible. Record only publicly visible likes, comments, reactions, or upvotes from normally accessible pages, normalize each candidate's cited evidence to `engagement_priority` 0–100, and never estimate unavailable metrics. The selected candidate must have the highest eligible engagement priority and then the highest story score, total at least 75, relatability at least 18/30, humor at least 18/30, and opening hook at least 12/20. Require two public pages for the selected candidate, except one official trend source. Record short source metadata and an anonymized observation only. If web research fails, use the documented local fallback and record why. If no candidate is safe and distinct, return the `requires_user_input` result from `topic-discovery.md`; the coordinator asks once and stops before IdeaAgent.
+Use Aside for bounded read-only collection of exactly five keyword candidates. Prefer actual monthly counts when the whole comparison cohort has matching units/windows/region; otherwise collect comparable DataLab/Google Trends indices or related-keyword ranks. Retain original values, method, dates, source URLs, and limitations. No account creation, login, advertising/API setup, payment, private metrics, posting, restriction bypass, or invented missing values. Broad topic domains are search filters, not proof of popularity. Do not require `$ulw-research` or rank by social likes.
+
+Preserve every existing source/story field, all eight hard gates, five story-score dimensions, and three or more distinct humor engines. Keep failed candidates and reasons, but exclude them from selection. A selected candidate needs story total ≥75, relatability ≥18, humor ≥18, hook ≥12, and official sources for policy/financial facts. For a timely slot, try measured rising demand, then a dated official event in the documented 30-day window, then an evergreen fallback with a reason.
+
+The coordinator writes `keyword-evidence.json` and runs `topic_search.py select --evidence ... --output ... --history ...`. The selector performs per-platform rank normalization, weights Naver 60% + Google 40%, breaks ties with story score/hook, and returns a schema 1.2 selection or hold while preserving evidence. Do not edit its computed decision to favor a candidate. Insufficient comparable evidence on either platform, failed editorial gates, or incomplete collection stops before IdeaAgent without a memory-only fallback or history update. Search-only success stops at the research artifact; full-generation success passes the selected topic to the unchanged downstream workflow. Follow `references/keyword-evidence.md` for the QA-bound `review-state.json` needed before recording a successful keyword-search completion.
 
 ### IdeaAgent
 

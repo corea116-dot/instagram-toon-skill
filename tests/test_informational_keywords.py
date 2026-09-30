@@ -175,7 +175,7 @@ def test_info_cli_selected_and_hold_do_not_change_history(tmp_path: Path) -> Non
     for status, code in (("selected", 0), ("hold", 2)):
         evidence = tmp_path / f"{status}-evidence.json"
         if status == "hold":
-            payload["batches"] = payload["batches"][:1]
+            payload["batches"] = payload["batches"][1:]
         evidence.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         output = tmp_path / f"{status}-research.json"
         result = CliRunner().invoke(app, [

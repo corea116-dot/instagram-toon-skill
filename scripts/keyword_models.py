@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal, Self
 
 from episode_models import PRIMARY_HUMOR_ENGINE_IDS, NonBlankString, StrictModel
-from pydantic import ConfigDict, Field, HttpUrl, TypeAdapter, model_validator
+from pydantic import AwareDatetime, ConfigDict, Field, HttpUrl, TypeAdapter, model_validator
 from pydantic_core import PydanticCustomError
 from topic_research_models import RichTopicCandidateModel
 
@@ -93,14 +93,18 @@ class SearchValue(StrictModel):
     value: Annotated[float, Field(ge=0, allow_inf_nan=False)]
     source_id: NonBlankString
     previous_value: Annotated[float, Field(ge=0, allow_inf_nan=False)] | None = None
+    pc_searches: Annotated[int, Field(ge=0, strict=True)] | None = None
+    mobile_searches: Annotated[int, Field(ge=0, strict=True)] | None = None
 
 
 class SearchBatch(StrictModel):
     platform: Platform
     method: Method
     comparison_key: NonBlankString
-    window_start: date
-    window_end: date
+    window_start: date | None = None
+    window_end: date | None = None
+    reporting_period: NonBlankString | None = None
+    observed_at: AwareDatetime | None = None
     geo: Literal["KR"]
     previous_window_start: date | None = None
     previous_window_end: date | None = None
@@ -108,7 +112,12 @@ class SearchBatch(StrictModel):
 
     @model_validator(mode="after")
     def comparable_values(self) -> Self:
-        if self.window_start > self.window_end:
+        if (self.window_start is None) != (self.window_end is None):
+            raise PydanticCustomError("keyword_window", "provide both dates or neither")
+        if self.window_start is None:
+            if self.platform != "naver" or self.method != "monthly_volume" or self.reporting_period is None or self.observed_at is None:
+                raise PydanticCustomError("keyword_window", "undated Naver monthly counts require provider reporting_period and observed_at")
+        elif self.window_start > self.window_end:
             raise PydanticCustomError("keyword_window", "invalid measurement window")
         if len({item.candidate_id for item in self.values}) != len(self.values):
             raise PydanticCustomError(
@@ -136,6 +145,8 @@ class SearchBatch(StrictModel):
         if any(value is not None for value in previous) or any(
             item.previous_value is not None for item in self.values
         ):
+            if self.window_start is None:
+                raise PydanticCustomError("keyword_previous", "growth comparison requires explicit measurement dates")
             start, end = previous
             if start is None or end is None or not start <= end < self.window_start:
                 raise PydanticCustomError(
@@ -151,6 +162,8 @@ class SearchBatch(StrictModel):
 
 class KeywordEvidence(StrictModel):
     schema_version: Literal["1.0"]
+    # Missing on historical records: retain their original reproducible calculation.
+    selection_policy: Literal["legacy_weighted", "naver_monthly"] = "legacy_weighted"
     researched_on: date
     sources: tuple[KeywordSource, ...]
     candidates: Annotated[
@@ -203,11 +216,19 @@ class KeywordEvidence(StrictModel):
                     "official facts need an official source reference",
                 )
         for batch in self.batches:
-            if not 0 <= (self.researched_on - batch.window_end).days <= 62:
+            if self.selection_policy == "naver_monthly" and batch.platform == "naver" and batch.method == "monthly_volume":
+                for item in batch.values:
+                    if item.pc_searches is None or item.mobile_searches is None or item.value != item.pc_searches + item.mobile_searches:
+                        raise PydanticCustomError(
+                            "keyword_components", "Naver monthly volume requires observed PC + mobile components matching the total"
+                        )
+            if batch.window_end is not None and not 0 <= (self.researched_on - batch.window_end).days <= 62:
                 raise PydanticCustomError(
                     "keyword_freshness",
                     "search windows must end within the last 62 days",
                 )
+            if batch.observed_at is not None and not 0 <= (self.researched_on - batch.observed_at.date()).days <= 7:
+                raise PydanticCustomError("keyword_freshness", "batch observation must be within seven days")
             for item in batch.values:
                 if item.candidate_id not in candidates or item.source_id not in sources:
                     raise PydanticCustomError(
@@ -219,6 +240,8 @@ class KeywordEvidence(StrictModel):
                         "keyword_platform",
                         "measurement source belongs to another platform",
                     )
+                if batch.window_end is None and sources[item.source_id].accessed_at.date() != batch.observed_at.date():
+                    raise PydanticCustomError("keyword_window", "undated monthly values must share the observation date")
         return self
 
 

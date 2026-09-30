@@ -16,7 +16,7 @@ Read the next type through `topic_search.py plan`, not by calendar day or infere
 
 ## Collect with Aside, decide locally
 
-Read `aside-browser` and run its current `aside guide` before using the browser. Use `aside exec` for a bounded evidence-collection task. There is no mandatory `$ulw-research` stage. Aside collects observed data; the local selector normalizes scores and chooses the result. Do not ask the browser agent to invent values, choose the winner, or draft the comic.
+Read `aside-browser` and run its current `aside guide` before using the browser. Use `aside exec` for bounded collection. There is no mandatory `$ulw-research` stage. Aside collects observations; the local selector ranks monthly counts. Do not ask the browser agent to invent values, choose the winner, or draft the comic.
 
 From the skill root:
 
@@ -27,25 +27,23 @@ uv run scripts/topic_search.py schema --output /absolute/project/keyword-evidenc
 
 Read `references/keyword-evidence.md` for the exact input contract. Give Aside the requested type, audience/topic filters, banned/duplicate constraints, the evidence schema, and a short task along these lines:
 
-> Read-only research for five Korean keyword candidates serving 20–30대 사회초년생. Collect comparable Naver and Google search-demand evidence, retaining the exact displayed value, unit, region, time window, access time, source URL, and limitations. Prefer actual monthly volumes already normally accessible; otherwise use comparable Naver DataLab/Google Trends relative indices or observed related-keyword ranks. Inspect official sources for policy/financial facts and dated timely triggers. Return observations and missing-data reasons, not a fabricated popularity estimate or winner. Do not register, log in, change account/settings, create ads, enable an API, pay, publish, or upload user files. Do not access private analytics or bypass restrictions.
+> Research five Korean keywords for 20–30대 사회초년생. In Naver Ads keyword tool, record exact input/returned terms, monthly PC and mobile counts separately, reporting definition/window, region, access time and URL. Preserve `<10` and ranges verbatim, never as zero. Google Trends may support momentum but never substitutes for counts. Check official facts and dated triggers. Return observations and missing-data reasons, not a winner. Use existing sessions or explicitly authorized login only. Do not register, accept new terms, change settings, create ads, enable APIs, pay, publish, upload files or bypass restrictions.
 
-Use `aside exec --permission guard` if supported by the current guide, with the scoped prompt above. `guard` is not itself a read-only guarantee; the task boundary still forbids external writes. Browser state may already permit a normal public view, but do not create new accounts or authorize spend to obtain data. API setup is not a prerequisite. If Aside is unavailable, report it; installation or a materially different collector requires the user's direction.
+Use `aside exec --permission guard` if supported. Reuse explicit authorization for the user's Naver blog account within scope; query Aside memory if account choice is unclear and never expose credentials. Stop for user action at MFA, registration or new terms. Login permission does not authorize payment, ads or API setup. API setup is not a prerequisite. If Aside is unavailable, report it; installation or a materially different collector requires user direction.
 
 Preserve only short observations, source metadata, and the evidence needed to reproduce the comparison. No copied posts, images, personal anecdotes, or private account data. The coordinator writes `keyword-evidence.json`; the collector does not modify skill memory or episode history.
 
 ## Evidence and scoring rules
 
+Naver's provider wording `최근 한달간` plus `observed_at` is a valid period record; do not require exact start/end dates if the tool omits them. Collect the five terms with the same definition/settings on the same day. Follow `keyword-evidence.md` for fields; no extra chart lookups solely for dates and no measured-growth claim from an undated snapshot.
+
 Collect **exactly five real candidates** with the content-type-specific fields in `references/keyword-evidence.md`. Information candidates compare demand, reader question, audience fit, official support, safety and duplication; do not draft five detailed stories. Include rejected candidates/reasons. Never fabricate missing candidates; fewer than five means preserve partial research and hold.
 
-For each platform, use the highest-quality complete and comparable basis available for the five-candidate cohort:
+New runs require `selection_policy: naver_monthly`. Collect a complete comparable Naver `monthly_volume` batch for five candidates: `pc_searches`, `mobile_searches`, and their sum as `value`. Definitions, period, region and filters must match. Preserve exact input/returned terms and actual reporting period; never invent a calendar month or substitute a related term's count.
 
-1. Actual displayed monthly search volume, when all compared values share the same counting definition, period, region, and unit. A range, `<10`, or forecast is not an exact count.
-2. Comparable relative indices from Naver DataLab or Google Trends, using a shared comparison/window. Separately normalized charts are not automatically comparable.
-3. Actually observed related-keyword ranks, with a comparable ranking context and limitations recorded. Autocomplete position is a weak signal, not monthly search volume.
+Rank directly by monthly PC + mobile searches; no 60/40 weighting. Google Trends is auxiliary momentum/type evidence, never volume points. Missing Google data does not block a valid Naver comparison. Missing/incomplete Naver counts do block it. Ranges, `<10`, forecasts and estimates are not exact counts: retain raw observations, omit the numeric value and hold. Never pad with zero or fall back to relative proxies. Historical records without the new policy retain their original computation.
 
-Do not mix raw counts, indices, rank positions, social likes, or search-result page counts. Missing evidence is not zero demand. If neither a complete comparable basis nor the permitted fallback is available for **either** platform, hold instead of silently dropping it or redistributing the weights.
-
-The selector converts each platform's comparable ranks into a 0–100 percentile, using average ranks for ties, then calculates **Naver score × 0.6 + Google score × 0.4**. It retains the selected basis and original measurements. These are relative scores **within the observed candidate set**, not proof that a topic has the largest search volume on the whole platform. Label a mixed or proxy comparison as relative evidence; claim exact monthly volume only for the actual observed count and its period.
+Show the monthly ranking and eligibility/type rejections. Counts establish rank only within this cohort, not global popularity or guaranteed Instagram reach. Verify the winner's official facts before script handoff; if facts fail, mark the gate failed and recompute.
 
 Keyword score is primary after eligibility and requested-type/fallback filtering. Information ties use ascending candidate ID; humor ties use story score, hook and ID. Use the selector result, not an agent's preferred winner. High demand cannot rescue failed gates.
 
@@ -63,7 +61,7 @@ For selected policy, financial, economy, or investing information, verify claims
 
 ## Information eligibility
 
-Evidence 1.1 has `content_type: informational` and four gates: `audience_fit`, `source_relevance`, `safety`, `duplicate`. All must pass and official supporting sources must resolve. It has no humor engine, hook/payoff seed or story score. Elaborate the selected question into a brief 1.2 question-answer card only after selection. See `informational-workflow.md`.
+Evidence 1.1 has `content_type: informational` and four gates: `audience_fit`, `source_relevance`, `safety`, `duplicate`. All must pass and official supporting sources must resolve. It has no humor engine, hook/payoff seed or story score. Elaborate the selected question into a brief 1.3 question-answer-action contract only after selection. See `informational-workflow.md`.
 
 ## Preserve the existing story gates (humor evidence 1.0 only)
 
@@ -87,7 +85,7 @@ uv run scripts/topic_search.py select \
 Keep the generated `evidence` and `decision` together. Do not hand-edit computed scores, selected ID, requested/effective type, or fallback reasons. A malformed input is a collection/contract error to correct from actual evidence; it is not permission to invent measurements.
 
 - **Selected, search-only:** show the topic, five-candidate ranking, evidence strength, reason, and file paths; stop before story modules/IdeaAgent and do not update history.
-- **Selected, full episode:** retain the record in the episode, set `topic_origin: editorial_scout` and use the exact topic. Information continues with brief 1.2 and `informational-workflow.md`; humor keeps brief 1.1 and the existing story route.
+- **Selected, full episode:** retain the record in the episode, set `topic_origin: editorial_scout` and use the exact topic. New information continues with brief 1.3/script 1.2 and `informational-workflow.md`; humor keeps brief/script 1.1 and the existing story route.
 - **Hold or unavailable collection:** show the exact missing evidence or failed gates and preserve available research. Stop before script/art and leave history unchanged. Do not use memory-only candidates as a successful search result.
 
-At full-generation completion, record search evidence strength, source windows, requested/effective type, fallback, selected keyword/topic, weighted score, story gates, and official-fact checks in `## Agent QA`. After all required QA succeeds, write `review-state.json` according to `references/keyword-evidence.md`, then update history once. Leave the local draft at **검수 대기 (`review_pending`)**. No upload, publication, scheduler creation, or automatic approval is authorized by this workflow.
+At full-generation completion, record monthly PC/mobile counts, source windows, requested/effective type, fallback, selected keyword/topic, gates and official-fact checks in `## Agent QA`. After required QA succeeds, write `review-state.json` per `references/keyword-evidence.md`, then update history once. Leave the local draft at **검수 대기 (`review_pending`)**. No upload, publication, scheduler creation or automatic approval is authorized.

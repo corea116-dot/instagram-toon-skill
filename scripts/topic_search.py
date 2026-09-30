@@ -31,7 +31,7 @@ from rendering import write_text_atomic
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HISTORY = SKILL_ROOT / "memory" / "episode-history.json"
 app = typer.Typer(
-    help="Aside evidence → reproducible Naver 60% / Google 40% topic selection."
+    help="Aside evidence → Naver monthly PC + mobile ranking; Google Trends is auxiliary."
 )
 
 
@@ -55,7 +55,9 @@ def plan(history: Annotated[Path, typer.Option()] = DEFAULT_HISTORY) -> None:
                 "history": str(history.resolve()),
                 "audience": "20–30대 사회초년생",
                 "kpi": ["조회", "신규유입"],
-                "weights": {"naver": 0.6, "google": 0.4},
+                "selection_policy": "naver_monthly",
+                "ranking_metric": "Naver monthly PC + mobile searches",
+                "google_role": "auxiliary momentum only; never weighted",
                 "candidate_count": 5,
                 "collector": "aside",
                 "stop_after_generation": "review_pending",
@@ -77,8 +79,11 @@ def schema(
         if content_type == ContentType.informational
         else KeywordEvidence
     )
+    exported = model.model_json_schema()
+    exported["properties"]["selection_policy"] = {"const": "naver_monthly", "default": "naver_monthly", "type": "string"}
+    exported.setdefault("required", []).append("selection_policy")
     content = (
-        json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2)
+        json.dumps(exported, ensure_ascii=False, indent=2)
         + "\n"
     )
     if output is None:
@@ -101,7 +106,12 @@ def select(
         )
         raise typer.Exit(1)
     try:
-        collected = keyword_evidence_adapter.validate_json(evidence.read_bytes())
+        payload = json.loads(evidence.read_bytes())
+        if not isinstance(payload, dict):
+            raise ValueError("Evidence must be a JSON object")
+        # New CLI runs cannot silently fall back to historical proxy ranking.
+        payload["selection_policy"] = "naver_monthly"
+        collected = keyword_evidence_adapter.validate_python(payload)
         today = datetime.now(ZoneInfo("Asia/Seoul")).date()
         if not 0 <= (today - collected.researched_on).days <= 7:
             typer.echo(
@@ -116,7 +126,7 @@ def select(
             else KeywordResearch(evidence=collected, decision=decision)
         )
         write_text_atomic(output, result.model_dump_json(indent=2) + "\n")
-    except (OSError, ValidationError) as error:
+    except (OSError, ValidationError, ValueError) as error:
         typer.echo(f"Cannot select a topic: {error}", err=True)
         raise typer.Exit(1) from error
     typer.echo(

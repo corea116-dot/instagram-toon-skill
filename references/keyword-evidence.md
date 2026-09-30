@@ -1,14 +1,26 @@
 # Keyword evidence and executable contract
 
-This is the collection/selection boundary. Information: evidence 1.1, research 1.3, brief 1.2, script 1.1. Humor: evidence 1.0, research 1.2, brief/script 1.1. Do not migrate historical episodes.
+This is the collection/selection boundary. New information: evidence 1.1, research 1.3, brief 1.3, script 1.2. Humor: evidence 1.0, research 1.2, brief/script 1.1. Historical information brief 1.2/script 1.1 remains readable; do not migrate it.
+
+## Current selection policy: Naver monthly counts
+
+For Naver `monthly_volume`, exact dates are optional. When the tool provides only `최근 한달간`, omit both `window_start` and `window_end`; retain the provider wording as `reporting_period` and a timezone-aware `observed_at`. All five terms must share the tool, definition, settings and observation day. Keep source observations on that day; existing same-day evidence may be reused. Never infer dates or open additional charts just to fill them. Other metric types still require explicit dates. Undated snapshots cannot include previous values or establish measured growth. When choosing among complete batches, explicit end date or undated observation date supplies the recency key, not an inferred measurement endpoint. Existing dated records remain valid.
+
+All new CLI selections enforce `selection_policy: naver_monthly`, required by the exported collector schema. Historical records lacking the field retain `legacy_weighted` when reading saved results. Historical weighting/proxy rules below are not fallbacks for new runs.
+
+Each Naver monthly value requires integer `pc_searches` and `mobile_searches`; `value` must equal their sum. Keep displayed terms, reporting definition/window and both components in source observations. `<10`, ranges and missing components stay verbatim in observations, not fabricated numbers. Partial batches remain evidence but produce hold.
+
+New decision rows use `naver` and `total` as monthly counts, not percentiles; `google` is null. Rank descending by count. `bases` contains only the complete Naver monthly batch. Google observations stay in evidence for auxiliary momentum/type checks, never weighted into demand. Missing Google data does not force hold; missing complete Naver monthly data does, even when relative indices exist. `exact_monthly` describes the Naver metric only. Eligibility and requested-type/event/evergreen fallback remain, so report any rejection of overall rank 1. Historical decisions retain their calculation.
+
+Login requires explicit account authorization. Stop at new registration, required terms or MFA for user action. No ads, billing, paid APIs or publication is implied.
 
 ## Informational contract (current information route)
 
-`topic_search.py schema` defaults to information; add `--content-type humor` for the preserved humor input. Evidence 1.1 requires `content_type: informational`. Sources, dates, batches, normalization, freshness, monthly priority, requested/effective type, fallback and hold rules below are shared unchanged.
+`topic_search.py schema` defaults to information; add `--content-type humor` for humor. Evidence 1.1 requires `content_type: informational`. Source/freshness and eligibility contracts are unchanged. The current selection-policy section overrides historical weighting, proxy fallback and both-platform requirements below.
 
 Each information candidate has `id`, `topic`, `keyword`, `category`, `keyword_type`, `demand_reason`, `reader_question`, `audience_fit`, `source_relevance`, `safety_note`, `duplicate_note`, `source_ids`, `official_source_ids`, `eligibility`, and `gate_results` with exactly four booleans (`audience_fit`, `source_relevance`, `safety`, `duplicate`). `eligibility` equals their conjunction. Optional paired `event_kind`/`event_date` are unchanged. No humor engine, story seed, contradiction, payoff or quality score is required or fabricated. Compare five concise candidates; write a detailed direction only for the winner.
 
-The selector produces research 1.3 with `content_type: informational`, `evidence`, `decision`. Equal weighted scores break by ascending ID, not a hidden story score. `keyword_evidence_adapter` and `keyword_research_adapter` parse both versions; legacy model classes retain their contracts. Full information episodes use brief 1.2 and the independent `content-review.json` contract in `informational-workflow.md`.
+The selector produces research 1.3 with `content_type: informational`, `evidence`, `decision`. Equal weighted scores break by ascending ID, not a hidden story score. `keyword_evidence_adapter` and `keyword_research_adapter` parse both versions; legacy model classes retain their contracts. Full new information episodes use brief 1.3/script 1.2 and the review/lock/preflight contracts in `informational-workflow.md`.
 
 Information completion writes `review-state.json` with `status: review_pending`, actual `topic_research_sha256`, `content_review: PASS`, and `visual_qa: PASS`. The history updater also validates current brief/script-bound content review and the full episode. These fields cannot stand in for an actual review. Legacy humor completion keeps separate story/dialogue/continuity fields below. No draft-only pilot or search-only run advances rotation.
 
@@ -66,7 +78,9 @@ For a measured rise, also provide `previous_window_start`, `previous_window_end`
 
 For persistent-demand classification, inspect a longer view (normally twelve months) and record repeated demand in `demand_reason` and cited observations. A one-day peak alone is not evergreen. Extra long-window batches may coexist with current batches. For trending attempts, collect fallback event/evergreen candidates when no measured rise is supported; if the five candidates yield no eligible tier, hold and do a new evidence-backed attempt rather than relabeling them without evidence.
 
-## Computed result: `topic-research.json` schema 1.2 (humor; shared calculations apply to 1.3)
+## Historical weighted calculation (saved legacy records only)
+
+The following calculation is only for `selection_policy: legacy_weighted`, including historical records without the field. New CLI runs use the Naver monthly calculation documented above.
 
 The result contains `schema_version: "1.2"`, the full `evidence`, and `decision`. Never hand-edit it. Parsing a result recomputes and verifies the decision.
 

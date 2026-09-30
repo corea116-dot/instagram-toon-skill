@@ -18,7 +18,8 @@ PLATFORMS: tuple[Platform, ...] = ("naver", "google")
 
 
 def _basis(evidence: KeywordEvidence, platform: Platform) -> PlatformBasis | None:
-    for method in METHODS:
+    methods = ("monthly_volume",) if evidence.selection_policy == "naver_monthly" and platform == "naver" else METHODS
+    for method in methods:
         complete = [
             (index, batch)
             for index, batch in enumerate(evidence.batches)
@@ -27,7 +28,7 @@ def _basis(evidence: KeywordEvidence, platform: Platform) -> PlatformBasis | Non
             and len(batch.values) == 5
         ]
         if complete:
-            index, _ = max(complete, key=lambda pair: (pair[1].window_end, -pair[0]))
+            index, _ = max(complete, key=lambda pair: (pair[1].window_end or pair[1].observed_at.date(), -pair[0]))
             return PlatformBasis(platform=platform, method=method, batch_index=index)
     return None
 
@@ -88,13 +89,17 @@ def _official_event(candidate: KeywordCandidate, evidence: KeywordEvidence) -> b
 
 
 def select_topic(evidence: KeywordEvidence, requested: KeywordType) -> KeywordDecision:
+    monthly = evidence.selection_policy == "naver_monthly"
     bases = tuple(
         basis
-        for platform in PLATFORMS
+        for platform in (("naver",) if monthly else PLATFORMS)
         if (basis := _basis(evidence, platform)) is not None
     )
     ranked = {
-        basis.platform: _rank_scores(evidence.batches[basis.batch_index])
+        basis.platform: (
+            {item.candidate_id: item.value for item in evidence.batches[basis.batch_index].values}
+            if monthly else _rank_scores(evidence.batches[basis.batch_index])
+        )
         for basis in bases
     }
     eligible = tuple(
@@ -129,7 +134,7 @@ def select_topic(evidence: KeywordEvidence, requested: KeywordType) -> KeywordDe
             )
         else:
             reason = "evergreen fallback: no measured rise or timely official event"
-    has_evidence = len(bases) == 2
+    has_evidence = len(bases) == (1 if monthly else 2)
     positive = {
         candidate.id
         for candidate in pool
@@ -145,12 +150,12 @@ def select_topic(evidence: KeywordEvidence, requested: KeywordType) -> KeywordDe
         naver = ranked.get("naver", {}).get(candidate.id)
         google = ranked.get("google", {}).get(candidate.id)
         total = (
-            round(naver * 0.6 + google * 0.4, 4)
+            naver if monthly else round(naver * 0.6 + google * 0.4, 4)
             if naver is not None and google is not None
             else None
         )
         rejection = (
-            "insufficient comparable evidence on both platforms"
+            ("missing complete Naver monthly PC + mobile counts" if monthly else "insufficient comparable evidence on both platforms")
             if not has_evidence
             else "audience/source/safety/duplicate gate failed"
             if isinstance(candidate, InformationalKeywordCandidate)
@@ -210,7 +215,7 @@ def select_topic(evidence: KeywordEvidence, requested: KeywordType) -> KeywordDe
         ),
     )
     scored = tuple(
-        row.model_copy(update={"rejection_reason": "lower weighted score or tie-break"})
+        row.model_copy(update={"rejection_reason": "lower monthly volume or tie-break" if monthly else "lower weighted score or tie-break"})
         if row.candidate_id != winner.id and row.rejection_reason is None
         else row
         for row in ranked_rows

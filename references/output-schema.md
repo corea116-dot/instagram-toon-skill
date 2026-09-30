@@ -1,12 +1,14 @@
 # Output Contracts
 
-All JSON files use UTF-8, two-space indentation and a trailing newline. Informational brief is 1.2; humor brief, script and composition are 1.1. Historical contracts remain readable. Asset paths in JSON are relative to the skill root. PNG files are 1080x1350 pixels.
+All JSON files use UTF-8, two-space indentation and a trailing newline. New information uses brief 1.3/script 1.2; humor brief/script and composition remain 1.1. Historical contracts remain readable. Asset paths in JSON are relative to the skill root. PNG files are 1080x1350 pixels.
 
-## Informational artifacts (brief 1.2)
+## Informational artifacts (brief 1.3, script 1.2)
 
-See `informational-workflow.md` for the exact question-answer, direction and independent `content-review.json` fields. `BriefModel` in `story_choice_models.py` is the executable contract. Set `content_type: informational`, `question_answer`, one information direction, `selected_direction`, the normal audience/topic/characters/checks/status and requested `output_layout`. Additional directions require `additional_direction_reason`. Do not add fake selected humor metadata. Script stays 1.1; `ending_payoff` is an answer/action here. Optional modules need the routing record only when the policy is enabled.
+Scene planning uses existing fields: `scene` names the on-screen character IDs, place and situation; `action` records interaction; `background`, `props` and `camera` carry spatial context and framing. `brief.characters` is the registered episode roster, not a per-panel attendance list. Include non-speaking recurring characters in the roster and explicitly state their presence in `scene`. No new scene JSON or schema version is required. Shared style references may support several separately defined identities; an image of the protagonist alone does not establish a supporting character's exact appearance.
 
-Information search uses evidence 1.1/research 1.3 (`keyword-evidence.md`), not the legacy examples below. Information completion additionally requires current passed `content-review.json`; composition, validation and history reject missing/stale/failed approval. QA report summarizes that file instead of copying it. History records the content type; its compatibility field `twist` contains the actual ending dialogue, not an invented joke. Question/answer stays in brief. The three-direction and StoryCritic requirements below describe humor only.
+See `informational-workflow.md` for the exact question-answer-action, direction, review, lock and layout fields. `BriefModel` in `story_choice_models.py` is the executable contract. Set `content_type: informational`, `question_answer.reader_actions` with one to three concrete steps, one information direction, `selected_direction`, normal audience/topic/characters/checks/status and requested `output_layout`. Additional directions require `additional_direction_reason`. Do not add fake selected humor metadata. Script 1.2 adds `panel_job`, `new_information`, `reader_takeaway`, `scope` and `text_budget` to every panel; `ending_payoff` means the final answer/action. Optional modules need the routing record only when the policy is enabled.
+
+Information search uses evidence 1.1/research 1.3 (`keyword-evidence.md`), not the legacy examples below. Information completion additionally requires passed `content-review.json` 1.1, a semantic `content-lock.json`, and a current passed `layout-preflight.json`; composition, validation and history reject missing/stale/failed records. QA report summarizes them instead of copying them. History records the content type; its compatibility field `twist` contains the actual ending dialogue, not an invented joke. The three-direction and StoryCritic requirements below describe humor only.
 
 ## Contents
 
@@ -16,6 +18,7 @@ Information search uses evidence 1.1/research 1.3 (`keyword-evidence.md`), not t
 - [`topic-research.json`](#topic-researchjson)
 - [`instagram-source.json`](#instagram-sourcejson)
 - [`script.json`](#scriptjson)
+- [`content-review.json`, `content-lock.json`, `layout-preflight.json`](#information-gates)
 - [`prompts/panel-N.json`](#promptspanel-njson)
 - [`final/composition.json`](#finalcompositionjson)
 - [`memory/episode-history.json`](#memoryepisode-historyjson)
@@ -31,6 +34,9 @@ episodes/EP-NNN-kebab-slug/
 ├── topic-research.json          # required only for EditorialScoutAgent selections
 ├── instagram-source.json        # required only for explicit Instagram-link selections
 ├── script.json
+├── content-review.json          # information: semantic review
+├── content-lock.json            # information 1.3: accepted semantic version
+├── layout-preflight.json        # information 1.3: final-page text-fit check
 ├── prompts/
 │   └── panel-N.json                # one file per ordered story panel
 ├── raw/
@@ -124,7 +130,7 @@ Module IDs, statuses, modes, counts, nonblank reasons, complete registry, and bu
 
 For full episodes, this file is required when `brief.json.topic_origin` is `editorial_scout`. Search-only runs may produce it without a brief. It records source-backed selection, not copied web content. Both formats below retain exactly five candidates using at least three primary humor engines; the appropriate schema determines the demand ranking rules.
 
-### Keyword-search schema 1.2 (new automatic selections)
+### Keyword-search schema 1.2 (humor automatic selections)
 
 Read `references/keyword-evidence.md` and generate the current machine-readable input schema with `uv run scripts/topic_search.py schema`. The collector's input is `keyword-evidence.json`; the deterministic selector writes `topic-research.json` with `schema_version: "1.2"`, the full `evidence`, and the computed `decision`. Do not adapt the legacy example below by merely changing its version number.
 
@@ -330,7 +336,62 @@ Required keys for a new script are `schema_version`, `episode_id`, `title`, `out
 }
 ```
 
-The example shows only panel 1. Every inner panel uses section and beat `development`; the final panel uses `ending` and `ending_payoff`. StoryCriticAgent must record the opening-hook gate described in `references/qa-rubric.md` before art begins.
+The example shows a humor panel. Every inner panel uses section and beat `development`; the final panel uses `ending` and `ending_payoff`. Information script 1.2 uses the same visual/dialogue keys and additionally requires, for example:
+
+```json
+{
+  "panel_job": "독자가 확인할 첫 번째 조건을 설명한다",
+  "new_information": "상품 위험은 계좌 혜택과 별개다",
+  "reader_takeaway": "계좌보다 담을 상품의 위험을 먼저 확인한다",
+  "scope": "모든 ISA 안의 투자상품",
+  "text_budget": 72
+}
+```
+
+Adjacent information panels must have different jobs, and combined visible non-space dialogue and card characters cannot exceed `text_budget`. StoryCriticAgent records the humor opening gate; information uses the integrated review in `informational-workflow.md`.
+
+### Optional information card in script 1.2
+
+Default to character-led panels: omit `panel.information_card` or set it to null, including for short factual explanations with numbers/dates. Use it only when visual structure materially helps comprehension. In the human-readable script preview label every panel `캐릭터 중심` or `카드+캐릭터` with its reason; do not add an unsupported presentation field to script JSON. Existing action/camera and card design_reason carry the plan. No fixed ratio or alternation is required. `format` and `design_reason` are free nonblank strings, not a closed template catalogue. Design a table, calendar, comparison, sequence or another content-appropriate arrangement using arbitrary text boxes and shapes. All coordinates are absolute on the 1080x1350 panel.
+
+```json
+{
+  "information_card": {
+    "format": "두 조건 비교",
+    "design_reason": "서로 다른 조건을 같은 기준으로 나란히 보여 준다",
+    "area": {"x": 54, "y": 380, "width": 972, "height": 480},
+    "texts": [
+      {"id": "left", "text": "첫 번째 조건", "x": 78, "y": 420, "width": 430, "height": 300, "align": "center", "color": "#292724"},
+      {"id": "right", "text": "두 번째 조건", "x": 555, "y": 420, "width": 430, "height": 300, "align": "center", "color": "#292724"}
+    ],
+    "shapes": [
+      {"shape": "rectangle", "x": 54, "y": 380, "width": 480, "height": 480, "fill": "#F7F1E6"}
+    ],
+    "presenter": {
+      "character_id": "bgoon",
+      "area": {"x": 230, "y": 900, "width": 620, "height": 396},
+      "pose": "두 조건을 번갈아 가리키며 설명한다",
+      "explanation_bubble": 1
+    }
+  }
+}
+```
+
+The surrounding panel must also contain the presenter's nonblank speech bubble (at most two as before), with its own nonoverlapping geometry, for example above this card. `presenter.explanation_bubble` is its one-based index and its speaker must match `character_id`. The character area must be substantial enough to show the gesture and recognizable face; its presence is checked visually, not inferred from JSON.
+
+`texts` requires unique IDs and nonoverlapping boxes inside `area`. `align` is left/center/right; colors are hex RGB. `shapes` optionally uses rectangle, rounded_rectangle or ellipse backgrounds within the card; these drawing primitives do not restrict the content format. Card, presenter and speech regions must not overlap. Cards require information script 1.2; old non-card scripts remain valid and retain their hashes.
+
+All card strings are part of content review, source coverage, lock, combined text budget and final-page font fitting. Card wording, labels, format meaning or explanatory interaction changes invalidate content review/lock. Pure coordinate, size or color changes invalidate layout preflight without forcing new source research. Tables/arrows still need semantic and visual checking: geometry validation alone cannot prove the relationships are correct.
+
+## Information gates
+
+`content-review.json` 1.1 stores `content_sha256`, `layout_sha256`, the blind reader's recalled question/actions/repeats/awkward phrases/check location, all twelve hard checks, and source-backed claim coverage. `content_sha256` excludes page grouping and bubble geometry, so a geometry-only change does not repeat fact review.
+
+`content-lock.json` 1.0 stores the current semantic hash, `mode` (`user_accepted` during calibration or `automatic_contract` only after separate baseline adoption), a timezone-aware lock time and a nonblank approval note. Any semantic change makes it stale.
+
+`layout-preflight.json` 1.0 stores the current layout hash, fitted/effective font sizes, dense-page findings and pass/fail result. Text, text budget, page grouping or bubble geometry changes make it stale. Run `lock_content.py`, then `layout_preflight.py`, before provider prompts or image generation.
+
+Card records use `kind: card` and `element_id` alongside the corresponding text-block index in existing layout/preflight entries; ordinary records default to `kind: bubble`. The same 34px effective minimum applies to every visible text block after page-group scaling. Card text may supply a required-fact `script_quote` in content review.
 
 ## `prompts/panel-N.json`
 
@@ -359,6 +420,8 @@ This file is the stable image-provider input.
 ```
 
 The two paths above are illustrative. Run `uv run scripts/active_reference.py` immediately before prompt creation and use every real path in its `reference_images` array, never the `assets/references/styles` directory marker itself. Every supported image directly in `styles/` is included in filename order; if that folder is empty, every supported image directly in `current/` is the fallback. For this skill, `reference_images` begins with resolved authoritative character references, followed by all resolved primary style references, deduplicating shared images, then explicitly allowed secondary references. This order applies to every new panel and user-requested targeted regeneration. `prompt` must lock immutable character identity and specify the effective wardrobe and footwear state. A panel may add `wardrobe_overrides` in `script.json` only with `character_id`, `outfit`, `footwear`, and `story_reason`; the state persists until another override. The current Codex image feature, deterministic mock generator, and future `scripts/generate_panel.py` must all output an exact 1080x1350 `raw/panel-N.png` from this contract.
+
+For a card panel, the manifest additionally retains `information_card` metadata. Send the provider only the illustration instructions, approved references and reserved card/bubble/presenter regions, not the card's visible strings as lettering instructions. The generated character explains the planned card; deterministic composition draws the actual shapes and text afterward. A missing/stale card declaration fails validation.
 
 ## `final/composition.json`
 

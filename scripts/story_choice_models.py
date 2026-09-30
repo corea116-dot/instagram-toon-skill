@@ -3,9 +3,15 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated, ClassVar, Literal, Self, assert_never
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
-
 
 CANVAS_WIDTH = 1080
 CANVAS_HEIGHT = 1350
@@ -73,9 +79,7 @@ class RichDirectionModel(StrictModel):
     humor_engine_id: HumorEngineId
     engine_explanation: NonBlankString
     hook_promise: NonBlankString
-    development_changes: Annotated[
-        tuple[NonBlankString, ...], Field(min_length=1)
-    ]
+    development_changes: Annotated[tuple[NonBlankString, ...], Field(min_length=1)]
     payoff_reversal: NonBlankString
     beat_signature: NonBlankString
     why_relatable: NonBlankString
@@ -123,7 +127,9 @@ class FactSourceModel(StrictModel):
 class RequiredFactModel(StrictModel):
     id: NonBlankString
     claim: NonBlankString
-    category: Literal["identity", "relevance", "benefit", "condition", "risk", "uncertainty"]
+    category: Literal[
+        "identity", "relevance", "benefit", "condition", "risk", "uncertainty"
+    ]
     sources: Annotated[tuple[FactSourceModel, ...], Field(min_length=1)]
 
 
@@ -133,6 +139,7 @@ class QuestionAnswerModel(StrictModel):
     one_line_answer: NonBlankString
     required_facts: Annotated[tuple[RequiredFactModel, ...], Field(min_length=1)]
     reader_action: NonBlankString
+    reader_actions: Annotated[tuple[NonBlankString, ...], Field(max_length=3)] = ()
     out_of_scope: Annotated[tuple[NonBlankString, ...], Field(min_length=1)]
 
     @model_validator(mode="after")
@@ -140,6 +147,8 @@ class QuestionAnswerModel(StrictModel):
         ids = [fact.id for fact in self.required_facts]
         if len(ids) != len(set(ids)):
             raise ValueError("required_facts must have unique IDs")
+        if len(self.reader_actions) != len(set(self.reader_actions)):
+            raise ValueError("reader_actions must be distinct")
         return self
 
 
@@ -152,7 +161,7 @@ class InformationalDirectionModel(StrictModel):
 
 
 class BriefModel(StrictModel):
-    schema_version: Literal["1.0", "1.1", "1.2"]
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"]
     content_type: Literal["humor", "informational"] = "humor"
     question_answer: QuestionAnswerModel | None = None
     additional_direction_reason: NonBlankString | None = None
@@ -179,10 +188,10 @@ class BriefModel(StrictModel):
 
     @model_validator(mode="after")
     def validates_schema_specific_direction_contract(self) -> Self:
-        if self.schema_version == "1.2":
+        if self.schema_version in ("1.2", "1.3"):
             return self._validate_informational()
         if self.content_type != "humor" or self.question_answer is not None:
-            raise ValueError("informational briefs require schema 1.2")
+            raise ValueError("informational briefs require schema 1.2 or 1.3")
         if len(self.directions) != 3:
             raise ValueError("legacy humor briefs require exactly three directions")
         if self.schema_version == "1.0":
@@ -190,15 +199,16 @@ class BriefModel(StrictModel):
                 raise PydanticCustomError(
                     "output_layout", "brief schema 1.0 must not define output_layout"
                 )
-            if not all(isinstance(direction, DirectionModel) for direction in self.directions):
+            if not all(
+                isinstance(direction, DirectionModel) for direction in self.directions
+            ):
                 raise PydanticCustomError(
                     "brief_directions",
                     "brief schema 1.0 only accepts legacy directions",
                 )
             return self
         if not all(
-            isinstance(direction, RichDirectionModel)
-            for direction in self.directions
+            isinstance(direction, RichDirectionModel) for direction in self.directions
         ):
             raise PydanticCustomError(
                 "brief_directions",
@@ -238,7 +248,11 @@ class BriefModel(StrictModel):
                 "brief schema 1.1 requires selected story-quality metadata",
             )
         selected = next(
-            (direction for direction in self.directions if direction.id == self.selected_direction),
+            (
+                direction
+                for direction in self.directions
+                if direction.id == self.selected_direction
+            ),
             None,
         )
         if selected is None:
@@ -269,20 +283,37 @@ class BriefModel(StrictModel):
 
     def _validate_informational(self) -> Self:
         if self.content_type != "informational" or self.question_answer is None:
-            raise ValueError("schema 1.2 requires informational content and question_answer")
+            raise ValueError(
+                "schema 1.2/1.3 requires informational content and question_answer"
+            )
         if self.output_layout is None or sum(self.output_layout) < 3:
-            raise ValueError("informational briefs require an output_layout with at least three panels")
-        if any(value is not None for value in (self.selected_humor_engine_id, self.selected_beat_signature)):
+            raise ValueError(
+                "informational briefs require an output_layout with at least three panels"
+            )
+        if any(
+            value is not None
+            for value in (self.selected_humor_engine_id, self.selected_beat_signature)
+        ):
             raise ValueError("informational briefs must not use legacy humor metadata")
         if len(self.directions) > 1 and self.additional_direction_reason is None:
             raise ValueError("additional informational directions require a reason")
+        if self.schema_version == "1.3" and not self.question_answer.reader_actions:
+            raise ValueError(
+                "brief schema 1.3 requires one to three concrete reader_actions"
+            )
         ids = [direction.id for direction in self.directions]
         if len(ids) != len(set(ids)) or self.selected_direction not in ids:
             raise ValueError("selected_direction must name one unique direction")
         for direction in self.directions:
             if not isinstance(direction, InformationalDirectionModel):
-                raise ValueError("informational briefs require informational directions")
+                raise ValueError(
+                    "informational briefs require informational directions"
+                )
             changes = direction.development_changes
-            if len(changes) != sum(self.output_layout) - 2 or len(changes) != len(set(changes)):
-                raise ValueError("informational directions require a distinct change per inner panel")
+            if len(changes) != sum(self.output_layout) - 2 or len(changes) != len(
+                set(changes)
+            ):
+                raise ValueError(
+                    "informational directions require a distinct change per inner panel"
+                )
         return self

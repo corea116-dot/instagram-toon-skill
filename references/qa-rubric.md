@@ -2,7 +2,11 @@
 
 ## Informational review
 
-Use the six evidence-backed checks and two ordered reviewer inputs in `informational-workflow.md`. One independent reviewer replaces the separate premise/script/dialogue/continuity roles below. No required numeric score or humor. Generic money advice that omits the selected product's identity, benefit conditions or risk must fail. Test the unaided reader's answer against the actual card and claims; a recorded PASS is not proof of meaning by itself. Any changed brief/script invalidates approval until affected content is reviewed again.
+Use the twelve evidence-backed checks and two ordered reviewer inputs in `informational-workflow.md`. One independent reviewer replaces the separate premise/script/dialogue/continuity roles below. No required numeric score or humor. Generic money advice that omits the selected product's identity, benefit conditions or risk must fail. Test the unaided reader's answer against the actual topic contract and claims; a recorded PASS is not proof of meaning by itself. Changed meaning or wording invalidates approval until affected content is reviewed again; geometry-only changes require layout/visual checks.
+
+Review speech and information-card text together. The card form must fit its content, with labels, units and material qualifications unambiguous. Bubbles interpret rather than recite the entire card. In final images, every card panel also contains a substantial recognizable character visibly explaining it and a readable speech bubble. Card-only slides, character stickers, obscured faces, and unsupported implications from arrows/grouping fail. Card text counts toward the same text budget and final-page font limit, not a hidden allowance.
+
+Within the same review, check that character-led panels (solo or interacting cast) remain the default, each card has a comprehension reason, and panels without cards do not lose facts or become filler reactions. Apply the scene policy in `visual-rules.md`: compare planned cast, setting, action and interaction with final images; flag missing interactions or repetitive presenter framing, not merely consecutive cards. A purposeful shared room is valid continuity. Mixed presentation has no fixed ratio or forced supporting cast. Do not add a reviewer or another approval gate for this check.
 
 For both routes, inspect final pages in reading order; inspect raw only for suspected defects. Keep visual and cheap deterministic safeguards below. The public-engagement ranking below is historical only; current keyword search uses `keyword-evidence.md`, never likes or a local fabricated fallback.
 
@@ -132,7 +136,7 @@ Inspect these ten dimensions in priority order:
 6. Mobile readability
 7. Style and palette consistency
 8. Strict primary-reference palette adherence
-9. Very sparse background and two-prop maximum
+9. Purposeful setting/props, planned cast interaction and clear visual hierarchy
 10. Playful action balanced with a quiet, slightly lonely undertone
 
 Return only observed problems; do not request a whole-episode rerender for a panel-local failure.
@@ -152,7 +156,7 @@ Return only observed problems; do not request a whole-episode rerender for a pan
 }
 ```
 
-Any generated lettering, identity drift, missing scripted action, malformed hand/prop, unsafe bubble placement, wrong output size, or primary-reference style failure is blocking. Identity drift includes changed face, hair, beard, skin tone, body proportions, or expression grammar. A wardrobe or footwear change without a script `story_reason` is blocking continuity. A primary-reference style failure includes a dominant unapproved hue, a busy background, more than two nonessential props, a copied reference subject/scene, or a missed playful-but-quiet mood. Character identity and wardrobe continuity always outrank style: a style pass cannot rescue either failure. Regenerate that panel once with the resolved authoritative character references first and all current primary style references after them, deduplicating shared images; if it still fails, mark `review_required` and stop automatic retries. Report informational polish separately and do not automatically regenerate for it.
+Any generated lettering, identity drift, missing scripted action/cast, malformed hand/prop, unsafe bubble placement, wrong output size, or primary-reference style failure is blocking. Identity drift includes changed face, hair, beard, skin tone, body proportions, or expression grammar, including one character inheriting another's traits. A wardrobe or footwear change without a script `story_reason` is blocking continuity. A primary-reference style failure includes a dominant unapproved hue, clutter obscuring the action or text, a copied reference scene, or a missed planned mood. Necessary settings and supporting characters are not failures by themselves. Character identity and wardrobe continuity always outrank style. Regenerate the failing panel once with resolved authoritative character references first and all current primary style references after them, deduplicating shared images; if it still fails, mark `review_required` and stop automatic retries. Report informational polish separately and do not automatically regenerate for it.
 
 ## Deterministic validation
 

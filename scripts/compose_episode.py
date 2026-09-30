@@ -25,8 +25,8 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from content_review import require_content_review
 from composition_state import load_script, merge_layouts, require_complete_composition
+from content_review import require_content_review
 from delivery import (
     clear_obsolete_delivery_exports,
     delivery_paths,
@@ -44,6 +44,8 @@ from episode_models import (
     PromptManifestModel,
     RenderMode,
 )
+from information_lock import require_content_lock
+from layout_preflight import require_layout_preflight
 from pydantic import ValidationError
 from reference_policy import (
     CharacterReferencePolicy,
@@ -84,13 +86,25 @@ def _prompt_text(
 ) -> str:
     props = ", ".join(panel.props) if panel.props else "none"
     section = panel.section or "legacy"
+    card_instruction = ""
+    if panel.information_card:
+        card = panel.information_card
+        card_instruction = (
+            f" Information card format: {card.format}; reason: {card.design_reason}. "
+            f"Reserve completely blank card area {card.area.model_dump_json()} for deterministic text/shape overlay. "
+            f"Draw presenter {card.presenter.character_id} in area {card.presenter.area.model_dump_json()}, "
+            f"pose: {card.presenter.pose}. The presenter explains the adjacent card using bubble "
+            f"{card.presenter.explanation_bubble}; keep the visible character inside its reserved area. "
+            "This is a character-led comic, never an information-card-only slide. Do not render any letters or numbers."
+        )
     return (
         f"Section: {section}. Narrative beat: {panel.beat}. Scene: {panel.scene}. "
         f"Expression: {panel.expression}. Action: {panel.action}. "
         f"Props: {props}. Background: {panel.background}. Camera: {panel.camera}. "
-        f"Character identity lock (must remain unchanged): {character_policy.identity_text} "
+        f"Character identity lock (episode roster; preserve each identity when present): {character_policy.identity_text} "
         f"Wardrobe and footwear state: {wardrobe_text} "
-        "Character identity takes priority over style. Style may control only background, palette, texture, mood, and composition. Leave the declared speech-bubble safe areas uncluttered."
+        "Draw only the on-screen cast specified in this panel's Scene and Action; the episode roster is not a demand to draw everyone. Keep each person's face, hair, beard and outfit separate. Character identity takes priority over style. Render the planned setting and interaction, keeping the declared speech-bubble safe areas uncluttered."
+        + card_instruction
     )
 
 
@@ -137,7 +151,9 @@ def _reference_images_for(
         for reference in existing.reference_images
         if reference not in canonical_references
         and reference != "assets/references/styles"
-        and not reference.startswith(("assets/references/current/", "assets/references/styles/"))
+        and not reference.startswith(
+            ("assets/references/current/", "assets/references/styles/")
+        )
     )
     return canonical_references + tuple(dict.fromkeys(extras))
 
@@ -175,19 +191,22 @@ def _prompt_manifest(
         reference_images=reference_images,
         bubble_safe_areas=safe_areas,
         continuity=continuity,
+        information_card=panel.information_card,
     )
 
 
 def _preflight_partial(episode_dir: Path, script: EpisodeScriptModel) -> None:
-    paths = delivery_paths(
-        episode_dir, len(script.panels), script.output_layout
+    paths = delivery_paths(episode_dir, len(script.panels), script.output_layout)
+    require_complete_composition(
+        episode_dir, script, paths.rendered_panels + paths.final_images
     )
-    require_complete_composition(episode_dir, script, paths.rendered_panels + paths.final_images)
 
 
 def compose(options: ComposeOptions) -> Path:
     try:
         require_content_review(options.episode_dir)
+        require_content_lock(options.episode_dir)
+        require_layout_preflight(options.episode_dir)
     except ValueError as exc:
         raise RenderError(str(exc)) from exc
     script = load_script(options.episode_dir)
@@ -222,15 +241,17 @@ def compose(options: ComposeOptions) -> Path:
         prompt_path = prompts_dir / f"panel-{panel.panel}.json"
         partial = options.panel is not None
         revision = _revision_for(prompt_path, partial) if partial else 0
-        if options.mock or partial or not prompt_path.is_file():
+        card_changed = False
+        if prompt_path.is_file():
+            previous_prompt = PromptManifestModel.model_validate_json(prompt_path.read_text(encoding="utf-8"))
+            card_changed = previous_prompt.information_card != panel.information_card
+        if options.mock or partial or card_changed or not prompt_path.is_file():
             prompt = _prompt_manifest(
                 script,
                 panel,
                 mode,
                 revision,
-                _reference_images_for(
-                    prompt_path, reference_images, partial
-                ),
+                _reference_images_for(prompt_path, reference_images, partial),
                 character_policy,
             )
             write_text_atomic(prompt_path, prompt.model_dump_json(indent=2) + "\n")

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "style_name": "ep014-childlike-crayon",
-  "description": "Deliberately crude preschool-like crayon cartoon based on the approved EP-014 result: broken scribbled outlines, patchy fill with paper showing, oversized crooked head, tiny body, sparse backgrounds, and playful physical comedy.",
+  "description": "Deliberately crude preschool-like crayon cartoon: broken scribbled outlines, patchy fill with paper showing, oversized crooked head, tiny body, concise story-relevant settings and expressive action.",
   "canvas": {
     "width": 1080,
     "height": 1350,
@@ -16,17 +16,17 @@
     "priority_order": [
       "deliberately_crude_crayon_linework",
       "bgoon_face_and_proportion_grammar",
-      "very_sparse_background_and_props"
+      "clear_scene_hierarchy_and_story_relevant_setting"
     ],
     "use_only": [
       "palette relationships",
-      "sparse composition and negative space",
+      "visual hierarchy, depth, interaction and readable negative space",
       "mood and visual energy",
       "broken scribbled crayon texture and patchy fill"
     ],
     "do_not_copy": [
-      "the reference scene, gate, guard, badge, pose, or framing",
-      "reference scene, furniture, props, or pose",
+      "the reference's specific gate, guard, badge or ordered scene",
+      "exact furniture arrangement, pose sequence or framing copied as a whole",
       "text, watermark, signature, logo, or handle"
     ],
     "conflict_resolution": "Resolve every conflict in this order: immutable character identity, story-required wardrobe and footwear, then style. Style may control only background density, palette, texture, mood, and composition; it must not alter a character's face, hair, beard, skin tone, body proportions, or expression grammar."
@@ -53,9 +53,8 @@
     "rule": "Use these colors and restrained lighter or darker tints only. Do not introduce a dominant hue outside this family unless the user explicitly requests it."
   },
   "background": {
-    "density": "very_sparse",
-    "max_story_props": 2,
-    "rule": "Use one flat or nearly empty color field. Add only props essential to the beat; do not add decorative furnishings, patterns, or visual clutter."
+    "density": "scene_adaptive",
+    "rule": "Follow references/visual-rules.md scene policy: use concise recognizable settings and purposeful props, with no fixed prop count. Flat fields are available for emphasis, not required for every panel. Keep action, faces and text readable."
   },
   "emotional_tone": "Playful, awkward physical comedy with deadpan reactions.",
   "lighting": "flat, readable, and continuous across adjacent panels",

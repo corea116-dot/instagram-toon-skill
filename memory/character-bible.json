@@ -48,6 +48,48 @@
       "reference_images": [
         "assets/references/styles"
       ]
+    },
+    {
+      "id": "peer_friend",
+      "display_name": "peer_friend",
+      "role": "EP019에서 함께 신청 조건을 확인하는 성인 친구. 공무원이나 전문가가 아님. 필요한 에피소드에서만 선택.",
+      "identity": {
+        "age_range": "late-20s-to-30s adult",
+        "face": "rounded peach face, tiny black dot eyes, small simple mouth, no beard or moustache",
+        "hair": "short smooth side-parted earth-brown hair, no black spikes",
+        "body": "oversized rounded head, small adult torso, thin limbs and mitten-like hands in the shared crayon style",
+        "immutable_traits": [
+          "clean-shaven rounded face",
+          "short smooth side-parted brown hair",
+          "tiny black dot eyes",
+          "small adult torso and thin limbs"
+        ]
+      },
+      "wardrobe": {
+        "default": "plain teal-blue long-sleeve shirt and earth-brown trousers",
+        "footwear_default": "plain dark indoor socks",
+        "story_override_allowed": true,
+        "colors": [
+          "#176A95",
+          "#875D45",
+          "#292724"
+        ]
+      },
+      "signature_props": [],
+      "voice": {
+        "register": "casual contemporary Korean",
+        "traits": [
+          "함께 자료를 확인하는 동등한 친구",
+          "짧고 구체적인 설명"
+        ],
+        "avoid": [
+          "전문가나 공무원인 척하기",
+          "개인 수급 자격 단정"
+        ]
+      },
+      "reference_images": [
+        "assets/references/styles"
+      ]
     }
   ]
 }

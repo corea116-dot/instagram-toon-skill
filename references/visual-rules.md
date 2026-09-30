@@ -8,6 +8,8 @@ Export every final PNG at exactly 1080x1350 pixels in RGB or RGBA mode.
 - `composed/panel-N.png`: internal dialogue-composited panel inputs; never present them as postable exports.
 - Keep critical faces, hands, props, and bubble space inside the 54-pixel outer safe margin.
 - Reserve uncluttered bubble space identified by the storyboard; do not paint important details behind it.
+- Character-led panels have no information card or reserved card rectangle: show a substantial expressive character carrying a meaningful action, with dialogue space only. Short factual explanations may use this mode too. Follow the planned mixed sequence, vary framing/gestures, and do not turn every panel into a presenter slide. Do not require a fixed card ratio or strict alternation.
+- For informational cards, reserve card and presenter areas too. The same panel must show a recognizable, substantial character explaining the card through a speech bubble and a relevant gesture or gaze. No card-only slides or decorative character stickers. Choose table/calendar/comparison/sequence or another arrangement for the content rather than a repeated fixed template; the information workflow owns the full rule.
 - Judge legibility at mobile-feed size, not only at full resolution.
 
 ## Reference inputs
@@ -20,7 +22,16 @@ assets/references/styles/
 assets/references/current/
 ```
 
-Use all primary images for their shared character grammar and configured palette, sparse composition, mood, and flat textured illustration qualities. Never copy their scenes, furniture, props, poses, text, watermarks, signatures, logos, or handles. Immutable character identity wins over style: never change face, hair, beard, skin tone, body proportions, or expression grammar. Style may not supply a new character design. If an episode has no character, it may use only the style references. For new shared images, only add them to the folder; separate character-only references still require memory registration. Describe observable attributes; never claim to have trained or fine-tuned a model.
+Use all primary images for their shared character grammar and configured palette, visual hierarchy, mood, and textured illustration qualities. Adapt general staging principles such as depth, relative scale, gaze direction and interaction to an original scene. Do not reproduce a reference's specific scene, prop arrangement, pose sequence, text, watermark, signature, logo or handle. This originality rule does not prohibit settings or supporting characters. Immutable identity wins over style: never change a registered character's face, hair, beard, skin tone, body proportions or expression grammar. A new supporting character needs its own defined identity; shared style images are not proof of its exact appearance. Describe observable attributes; never claim training or fine-tuning.
+
+## Scene policy
+
+- Character-led means characters carry the scene, not that only the protagonist may appear. Choose solo action, interaction, card explanation or a concrete next action by the panel's job, with no fixed ratio or mandatory supporting cast.
+- In `scene`, explicitly name the on-screen cast, place and situation. Record each person's action, relative position and gaze in `action`/`camera`; use `dialogue.speaker` to identify the speaker. The episode character roster and identity locks do not require every character to appear in every panel.
+- Use a concise, recognizable setting when it explains the situation. Distinguish spatial cues such as a desk/window from handled story props; neither has a universal numerical cap. Keep only elements that support the action, spatial continuity or understanding. A flat background remains useful for emphasis, but is not the default for every panel.
+- Give supporting characters a meaningful task or relationship, distinguish their identity from the protagonist, and preserve it on reappearance. Register only characters the episode needs. Do not borrow a reference guard automatically or turn a fictional peer into an unverified official authority.
+- Plan text, cast and setting at the delivered page-cell size. Do not solve crowding by deleting material facts or shrinking people into stickers. A close-up may omit room details once the space is established. Reusing a room is valid continuity when the action changes.
+- Review the sequence for repeated presenter staging, not just changes in hand pose. The opening should make its situation/question legible; the ending should show or clearly support the reader's next action. Variety must serve the content, not become a scenery or character quota.
 
 ## Wardrobe and footwear
 
@@ -34,14 +45,14 @@ Use the character bible's default outfit and footwear unless a panel's `wardrobe
 - Repeat immutable identity descriptors in every panel prompt: face shape, hair, signature outfit colors, and persistent accessories.
 - Repeat continuity state: time, lighting, background, character side, gaze, pose transitions, and prop position or condition.
 - Treat the configured palette as strict: use only its allowed colors and restrained tints unless the user explicitly asks otherwise.
-- Use one flat or nearly empty color-field background and no more than two story-essential props per panel.
+- Apply the scene policy above for setting density and purposeful props; do not force a flat background or a fixed prop count.
 - Balance brisk, playful physical comedy with a quiet, slightly lonely undertone.
 - Keep the style and palette consistent with `memory/visual-style.json`; its primary-reference policy takes precedence over character-reference visual treatment.
 - Generate only illustration. Exclude letters, Hangul, numbers, captions, speech bubbles, interface text, watermarks, signatures, and logos.
 
 ## Prompt file contract
 
-Write one `prompts/panel-N.json` per panel with exactly the stable provider fields `panel`, `revision`, `mode`, `size`, `prompt`, `negative_prompt`, `reference_images`, and `bubble_safe_areas`. Put resolved character references first, then all resolved primary style references, with each shared path attached only once. Encode the strict palette, sparse-background limit, playful/quiet mood, storyboard, identity descriptors, and continuity state in `prompt`. The provider may add run metadata elsewhere but must not change this stable input contract.
+Write one `prompts/panel-N.json` per panel using the executable `PromptManifestModel` and `references/output-schema.md`. Put resolved character references first, then all resolved primary style references, with each shared path attached only once. Encode the palette, planned cast and setting, mood, storyboard, identity descriptors, and continuity state in `prompt`. Identity descriptions are conditional on appearance, not a demand to draw the whole roster. For card panels include the model's card/presenter reserved areas and interaction in the prompt, without visible card strings. Raw art must not paint a duplicate card or any text; the deterministic compositor adds the designed card and lettering.
 
 ## Targeted regeneration
 
@@ -49,4 +60,6 @@ When VisualCriticAgent flags a panel, preserve every passing panel. Revise only 
 
 ## Visual rejection conditions
 
-Reject and revise a panel for identity drift, malformed or extra hands, fused or floating props, missing scripted actions, unexplained continuity jumps, occupied bubble-safe space, illegible composition at mobile size, palette/style drift, or any generated text-like marks. A primary-reference style failure includes a dominant color outside the approved palette, more than two nonessential props, a busy background, or a mood that misses the playful-but-quiet target. Crop or color differences alone are not grounds for regeneration when they are intentional and continuous.
+Reject and revise a panel for identity drift, malformed or extra hands, fused or floating props, missing scripted actions or cast, unexplained continuity jumps, occupied bubble-safe space, illegible composition at mobile size, palette/style drift, or any generated text-like marks. A primary-reference style failure includes a dominant color outside the approved palette, incidental clutter that competes with the action/text, a copied reference scene, or a mood that misses the planned tone. A necessary setting or supporting character is not itself a style failure. Crop or color differences alone are not grounds for regeneration when intentional and continuous.
+
+For card panels, also reject a missing explaining character/bubble, card text covering the character, illegible card text, or visual grouping that misstates a condition. For character-led panels, do not demand a card; check the meaningful action and information against the script. Check the whole sequence for unnecessary cards and repetitive layouts. A JSON presenter box alone is not visual evidence. Inspect the final composited page at its delivered size.

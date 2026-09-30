@@ -42,9 +42,9 @@ def topic_research_issues(episode_dir: Path) -> tuple[str, ...]:
             pass
         case _ as unreachable:
             assert_never(unreachable)
-    if brief.schema_version not in ("1.1", "1.2"):
+    if brief.schema_version not in ("1.1", "1.2", "1.3"):
         return (
-            f"editorial_scout episodes require brief schema 1.1 or 1.2: {brief_path}",
+            f"editorial_scout episodes require brief schema 1.1, 1.2 or 1.3: {brief_path}",
         )
     path = episode_dir / "topic-research.json"
     if not path.is_file():
@@ -57,19 +57,21 @@ def topic_research_issues(episode_dir: Path) -> tuple[str, ...]:
                 keyword_research.schema_version == "1.3"
                 and brief.content_type != "informational"
             ):
-                return (f"informational topic research requires an informational brief: {path}",)
+                return (
+                    f"informational topic research requires an informational brief: {path}",
+                )
             if keyword_research.decision.status != "selected":
                 return (f"held keyword research cannot proceed to an episode: {path}",)
             if brief.topic != keyword_research.selected_topic:
-                return (f"topic-research selected topic does not match brief topic: {path}",)
+                return (
+                    f"topic-research selected topic does not match brief topic: {path}",
+                )
             return ()
         research = TopicResearchModel.model_validate_json(raw)
     except (OSError, ValidationError) as error:
         return (f"invalid structured file {path}: {error}",)
     if research.schema_version != "1.1":
-        return (
-            f"editorial_scout episodes require topic research schema 1.1: {path}",
-        )
+        return (f"editorial_scout episodes require topic research schema 1.1: {path}",)
     if brief.topic == research.selected_topic:
         return ()
     return (f"topic-research selected topic does not match brief topic: {path}",)

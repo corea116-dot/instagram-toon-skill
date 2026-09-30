@@ -22,34 +22,35 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
-from PIL import Image, UnidentifiedImageError
-from pydantic import ValidationError
 import typer
-
-from delivery import delivery_paths
 from content_review import content_review_issues
+from delivery import delivery_paths
+from episode_models import (
+    CANVAS_HEIGHT,
+    CANVAS_WIDTH,
+    BriefModel,
+    CompositionModel,
+    EpisodeScriptModel,
+    PromptManifestModel,
+    boxes_overlap,
+)
+from information_lock import content_lock_issues
+from instagram_link_validation import (
+    instagram_link_issues,
+    requires_instagram_link_analysis,
+)
 from language_policy import (
     hard_banned_issues,
     language_policy_issues,
     review_required_findings,
 )
-from episode_models import (
-    BriefModel,
-    CANVAS_HEIGHT,
-    CANVAS_WIDTH,
-    CompositionModel,
-    EpisodeScriptModel,
-    PromptManifestModel,
-)
-from instagram_link_validation import (
-    instagram_link_issues,
-    requires_instagram_link_analysis,
-)
+from layout_preflight import layout_preflight_issues, _panel_scale, MIN_EFFECTIVE_FONT_SIZE
+from PIL import Image, UnidentifiedImageError
+from pydantic import ValidationError
 from qa_reporting import QaSupplemental, existing_agent_section, qa_report_text
 from rendering import write_text_atomic
 from story_module_validation import story_module_issues, story_module_summary
 from topic_research_validation import requires_topic_research, topic_research_issues
-
 
 DEFAULT_PANEL_COUNT = 6
 DEFAULT_OUTPUT_LAYOUT: tuple[int, ...] | None = None
@@ -183,6 +184,10 @@ def _check_prompts(
         return ()
     panel_count, _ = delivery_config
     issues: list[str] = []
+    try:
+        script = EpisodeScriptModel.model_validate_json((episode_dir / "script.json").read_text(encoding="utf-8"))
+    except (OSError, ValidationError) as error:
+        return (f"invalid script for prompt validation: {error}",)
     for number in range(1, panel_count + 1):
         path = episode_dir / "prompts" / f"panel-{number}.json"
         if not path.is_file():
@@ -202,6 +207,8 @@ def _check_prompts(
             issues.append(f"prompt size mismatch at {path}: {prompt.size}")
         if not prompt.negative_prompt.strip():
             issues.append(f"negative prompt is empty at {path}")
+        if prompt.information_card != script.panels[number - 1].information_card:
+            issues.append(f"information card/presenter prompt metadata is stale at {path}")
     return tuple(issues)
 
 
@@ -224,9 +231,43 @@ def _check_layout(
     if manifest.canvas != (CANVAS_WIDTH, CANVAS_HEIGHT):
         issues.append(f"composition canvas mismatch: {manifest.canvas}")
     if manifest.output_layout != output_layout:
-        issues.append(
-            "composition output_layout does not match script output_layout"
-        )
+        issues.append("composition output_layout does not match script output_layout")
+    try:
+        script = EpisodeScriptModel.model_validate_json((episode_dir / "script.json").read_text(encoding="utf-8"))
+    except (OSError, ValidationError) as error:
+        return (f"invalid script for composition validation: {error}",)
+    scales: dict[int, float] = {}
+    next_number = 1
+    for group_size in script.output_layout or (1,) * len(script.panels):
+        for offset in range(group_size):
+            scales[next_number + offset] = _panel_scale(group_size, offset)
+        next_number += group_size
+    for panel in script.panels:
+        if not panel.information_card:
+            if any(entry.kind == "card" and entry.panel == panel.panel for entry in manifest.layouts):
+                issues.append(f"panel {panel.panel} has unexpected information card text")
+            continue
+        card = panel.information_card
+        entries = [entry for entry in manifest.layouts if entry.panel == panel.panel]
+        expected = {("bubble", index): text for index, text in enumerate(panel.dialogue, start=1)}
+        expected.update({("card", index): text for index, text in enumerate(card.texts, start=1)})
+        keys = [(entry.kind, entry.bubble) for entry in entries]
+        if len(keys) != len(set(keys)) or set(keys) != set(expected):
+            issues.append(f"panel {panel.panel} composition is missing or duplicating card/dialogue text")
+        for index, entry in enumerate(entries):
+            source = expected.get((entry.kind, entry.bubble))
+            if source is not None:
+                if "".join("".join(entry.lines).split()) != "".join(source.text.split()):
+                    issues.append(f"panel {panel.panel} {entry.kind} rendered text differs from script")
+                geometry = {key: getattr(source, key) for key in ("x", "y", "width", "height")}
+                if entry.safe_area.model_dump() != geometry:
+                    issues.append(f"panel {panel.panel} {entry.kind} safe area differs from script")
+                if entry.kind == "card" and entry.element_id != source.id:
+                    issues.append(f"panel {panel.panel} card text ID differs from script")
+            if round(entry.font_size * scales[panel.panel]) < MIN_EFFECTIVE_FONT_SIZE:
+                issues.append(f"panel {panel.panel} {entry.kind} effective font is below 34px")
+            if boxes_overlap(entry.box, card.presenter.area) or any(boxes_overlap(entry.box, other.box) for other in entries[index + 1:]):
+                issues.append(f"panel {panel.panel} card/dialogue/presenter overlap")
     for layout in manifest.layouts:
         box = layout.box
         safe = layout.safe_area
@@ -261,6 +302,8 @@ def validate_episode(episode_dir: Path) -> tuple[Path, tuple[str, ...]]:
         missing
         + _check_models(episode_dir)
         + content_review_issues(episode_dir)
+        + content_lock_issues(episode_dir)
+        + layout_preflight_issues(episode_dir)
         + _check_brief_script_layout(episode_dir)
         + hard_banned_issues(episode_dir)
         + language_policy_issues(episode_dir)

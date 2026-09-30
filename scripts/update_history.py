@@ -33,7 +33,9 @@ from typing import Annotated, ClassVar, Literal, TypeVar, override
 import typer
 from content_review import require_content_review
 from episode_models import EpisodeScriptModel
+from information_lock import require_content_lock
 from keyword_history import KeywordCompletion, completion_for_episode
+from layout_preflight import require_layout_preflight
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic_core import PydanticCustomError
 
@@ -50,7 +52,7 @@ class _EpisodeStatus(StrEnum):
 class _BriefModel(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
-    schema_version: Literal["1.0", "1.1", "1.2"]
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"]
     content_type: Literal["humor", "informational"] = "humor"
     episode_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
@@ -129,8 +131,10 @@ def _update_history(
     script = _read_model(episode_dir / "script.json", EpisodeScriptModel)
     try:
         require_content_review(episode_dir)
+        require_content_lock(episode_dir)
+        require_layout_preflight(episode_dir)
     except ValueError as error:
-        raise _EpisodeDataError(f"content review blocked history: {error}") from error
+        raise _EpisodeDataError(f"informational gates blocked history: {error}") from error
     history = _read_model(history_path, _HistoryModel)
     try:
         keyword_selection = completion_for_episode(episode_dir, brief.topic_origin)
@@ -219,7 +223,8 @@ def _update_history(
                     "humor_engine_id": incoming.humor_engine_id,
                     "beat_signature": incoming.beat_signature,
                     "hook_mode": incoming.hook_mode,
-                    "keyword_selection": incoming.keyword_selection or entry.keyword_selection,
+                    "keyword_selection": incoming.keyword_selection
+                    or entry.keyword_selection,
                 },
             ),
         )
@@ -230,7 +235,7 @@ def _update_history(
     updated = history.model_copy(
         update={
             "schema_version": "1.1"
-            if brief.schema_version in ("1.1", "1.2")
+            if brief.schema_version in ("1.1", "1.2", "1.3")
             else history.schema_version,
             "episodes": tuple(entries),
         }

@@ -1,6 +1,6 @@
 # Dialogue Naturalness Review
 
-Run this gate after StoryCriticAgent passes and before ArtDirectorAgent starts. It is a conservative Korean dialogue review, not a rewrite.
+For humor, run this gate after StoryCriticAgent passes and before ArtDirectorAgent starts. For information, apply the same checklist inside the single integrated review in `informational-workflow.md`; do not create another reviewer. It is a conservative Korean dialogue review, not a rewrite.
 
 ## Inputs
 
@@ -10,6 +10,9 @@ Read the current brief and `script.json`, `references/story-rules.md`, `memory/d
 
 - Literal or translated phrasing that does not sound spoken in Korean.
 - Needlessly formal, nominalized, passive, hedged, or over-connected wording.
+- English-calque-like wording that is grammatical but uncommon in the intended Korean register, such as shortening account opening to `계좌를 열다` when `계좌를 개설하다` or `계좌를 만들다` is clearer.
+- Missing objects or verbs caused by copy compression, including ambiguous fragments such as `열기 전`.
+- Generic checklist copy (`세 가지만 확인해`, `한쪽만 고르면 안 돼`) that does not immediately name the items and the reader's action.
 - Lines that explain action, setting, or emotion already carried by the image.
 - A line that breaks the defined character voice.
 - Profanity, configured prohibited tokens, common obfuscations (including initial-only disguises), slurs, sexualized insults, dehumanizing labels, identity-based attacks, or humiliating nicknames in `script.json` or `caption.txt`.
@@ -51,4 +54,4 @@ Return JSON only:
 
 `category` is one of `translated_phrase`, `stiffness`, `overexplaining`, `voice`, or `language_policy`. `severity` is `minor` or `blocking`. Any profanity, obfuscation, slur, sexualized insult, dehumanizing label, identity-based attack, or humiliating nickname is `blocking`; set `pass` to `false` until the coordinator resolves it. `episode_change_rate` is the proportion of all dialogue characters changed, recorded as a guardrail rather than a target.
 
-The coordinator may apply at most one automatic revision pass. Record all findings, protected elements, change rate, and applied before/after text in `qa-report.md` under `## Agent QA`. If a story recheck is requested, StoryCriticAgent must pass again before image generation. Apply the same preservation rules to `caption.txt` after visual QA; a caption-only edit never triggers image regeneration.
+The coordinator may apply at most one automatic revision pass. Record all findings, protected elements, change rate, and applied before/after text in `qa-report.md` under `## Agent QA`. If a humor story recheck is requested, StoryCriticAgent must pass again before image generation. For information, any changed visible wording invalidates the semantic content review and content lock. Apply the same preservation rules to `caption.txt` after visual QA; a caption-only edit never triggers image regeneration.

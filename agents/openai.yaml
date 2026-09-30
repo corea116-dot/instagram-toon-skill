@@ -1,7 +1,7 @@
 interface:
   display_name: "Instagram Toon"
-  short_description: "주제·공개 Instagram 링크로 만드는 가변 레이아웃 인스타툰"
-  default_prompt: "Use $instagram-toon to create a reviewed Instagram toon. Honor an explicit output layout such as 2컷+3컷; otherwise create five single-panel images."
+  short_description: "네이버·구글 주제 검색부터 검수 대기까지 만드는 인스타툰"
+  default_prompt: "Use $instagram-toon to search for a source-backed topic and create an Instagram toon draft for review. Honor a supplied topic or explicit layout; otherwise use keyword search and five single-panel images."
 
 policy:
   allow_implicit_invocation: true

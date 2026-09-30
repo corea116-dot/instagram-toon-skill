@@ -2,7 +2,7 @@
 
 ## Content-type boundary
 
-For brief 1.2 information, use `informational-workflow.md`: one sourced question-answer card and direction, information-changing inner panels, ending answer/action, one integrated independent content review. Humor engines, three directions, hidden ending, payoff reversal and separate dialogue gate below apply only to humor. Shared dialogue geometry, language, originality and safety still apply; helpful explanations are allowed in information. Caption is supplementary, never the only place holding a core answer or material condition.
+For new brief 1.3 information, use `informational-workflow.md`: one sourced question-answer-action contract and direction, explicit panel jobs/scopes, information-changing inner panels, concrete ending action, one integrated content review, content lock and layout preflight. Historical brief 1.2 remains readable. Humor engines, three directions, hidden ending, payoff reversal and separate dialogue gate below apply only to humor. Shared dialogue geometry, language, originality and safety still apply; helpful explanations are allowed in information. Caption is supplementary, never the only place holding a core answer or material condition.
 
 ## Layout-driven story structure (humor)
 

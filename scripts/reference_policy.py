@@ -174,14 +174,14 @@ def load_character_policy(
     selected = tuple(
         characters_by_id[character_id] for character_id in brief.characters
     )
-    references = resolve_reference_paths(
-        tuple(
+    references = tuple(
+        dict.fromkeys(
             reference
             for character in selected
-            for reference in character.reference_images
-        ),
-        skill_root,
-        "character references",
+            for reference in resolve_reference_paths(
+                character.reference_images, skill_root, "character references"
+            )
+        )
     )
     identity_text = " ".join(
         (

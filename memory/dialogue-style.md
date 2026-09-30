@@ -2,6 +2,8 @@
 
 - Write natural contemporary Korean suitable for a mobile screen.
 - Use short spoken clauses and concrete everyday vocabulary.
+- Keep the explicit object and action when shortening would make the meaning ambiguous. Prefer `ISA 계좌를 개설하기 전에` over `열기 전` in explanatory finance copy.
+- Do not use generic numbered-checklist phrases unless the nearby text names the actual checks and tells the reader what to do.
 - Keep at most two bubbles per panel; prefer one when the beat is visually clear.
 - Let the picture carry action, place, and emotion. Do not restate visible information.
 - Make the setup precise, the escalation brisk, and the final line the shortest decisive line.

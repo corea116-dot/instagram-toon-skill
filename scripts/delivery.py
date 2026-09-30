@@ -4,11 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from PIL import Image, ImageDraw, ImageOps
-
 from episode_models import CANVAS_HEIGHT, CANVAS_WIDTH
+from PIL import Image, ImageDraw, ImageOps
 from rendering import RenderError, save_png_atomic
-
 
 GRID_BACKGROUND: Final = (255, 248, 237)
 
@@ -68,7 +66,9 @@ def delivery_paths(
     raise RenderError(f"unsupported legacy panel count: {panel_count}")
 
 
-def _layout_pages(final_dir: Path, output_layout: tuple[int, ...]) -> tuple[DeliveryPage, ...]:
+def _layout_pages(
+    final_dir: Path, output_layout: tuple[int, ...]
+) -> tuple[DeliveryPage, ...]:
     next_panel = 1
     pages: list[DeliveryPage] = []
     for page_number, panel_total in enumerate(output_layout, start=1):
@@ -85,7 +85,7 @@ def _copy_panel(source_path: Path, output_path: Path) -> None:
         save_png_atomic(source.convert("RGB"), output_path)
 
 
-def _grid_geometry(
+def grid_geometry(
     count: int,
 ) -> tuple[tuple[tuple[int, int], ...], tuple[tuple[int, int], ...]]:
     match count:
@@ -106,10 +106,12 @@ def _grid_geometry(
 
 
 def _render_grid(sources: tuple[Path, ...], output_path: Path) -> None:
-    tile_sizes, positions = _grid_geometry(len(sources))
+    tile_sizes, positions = grid_geometry(len(sources))
     grid = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), GRID_BACKGROUND)
     grid_draw = ImageDraw.Draw(grid)
-    for source_path, tile_size, position in zip(sources, tile_sizes, positions, strict=True):
+    for source_path, tile_size, position in zip(
+        sources, tile_sizes, positions, strict=True
+    ):
         with Image.open(source_path) as source:
             panel = ImageOps.contain(source.convert("RGB"), tile_size)
         tile = Image.new("RGB", tile_size, GRID_BACKGROUND)
@@ -146,7 +148,9 @@ def render_delivery(
     paths = delivery_paths(episode_dir, panel_count, output_layout)
     for page in paths.pages:
         if target is None or target in page.panel_numbers:
-            sources = tuple(paths.rendered_panels[number - 1] for number in page.panel_numbers)
+            sources = tuple(
+                paths.rendered_panels[number - 1] for number in page.panel_numbers
+            )
             if len(sources) == 1:
                 _copy_panel(sources[0], page.output_path)
             else:

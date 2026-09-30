@@ -39,10 +39,10 @@ def merge_layouts(
     episode_dir: Path, target: int | None, new_entries: tuple[LayoutEntryModel, ...]
 ) -> tuple[LayoutEntryModel, ...]:
     if target is None:
-        return tuple(sorted(new_entries, key=lambda item: (item.panel, item.bubble)))
+        return tuple(sorted(new_entries, key=lambda item: (item.panel, item.kind, item.bubble)))
     path = episode_dir / "final" / "composition.json"
     previous = CompositionModel.model_validate_json(path.read_text(encoding="utf-8"))
     retained = tuple(item for item in previous.layouts if item.panel != target)
     return tuple(
-        sorted(retained + new_entries, key=lambda item: (item.panel, item.bubble))
+        sorted(retained + new_entries, key=lambda item: (item.panel, item.kind, item.bubble))
     )

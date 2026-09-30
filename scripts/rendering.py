@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from episode_models import (
     BoxModel,
+    CardTextModel,
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     DialogueModel,
@@ -38,7 +39,7 @@ PALETTE: Final = (
 PADDING: Final = 28
 TAIL_HEIGHT: Final = 22
 MIN_FONT_SIZE: Final = 26
-MAX_FONT_SIZE: Final = 56
+MAX_FONT_SIZE: Final = 96
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,6 +142,25 @@ def render_carousel(
         canvas = ImageOps.fit(source.convert("RGB"), (CANVAS_WIDTH, CANVAS_HEIGHT))
     draw = ImageDraw.Draw(canvas)
     layouts: list[LayoutEntryModel] = []
+    if panel.information_card:
+        card = panel.information_card
+        area = card.area
+        draw.rounded_rectangle((area.x, area.y, area.x + area.width, area.y + area.height), radius=20, fill="white")
+        for shape in card.shapes:
+            bounds = (shape.x, shape.y, shape.x + shape.width, shape.y + shape.height)
+            getattr(draw, shape.shape)(bounds, fill=shape.fill)
+        for index, text in enumerate(card.texts, start=1):
+            fitted = _fit_card_text(draw, font_path, text)
+            text_y = fitted.box.y
+            measurer = TextMeasurer(draw=draw, font=fitted.font)
+            for line in fitted.lines:
+                remaining = text.width - 24 - ceil(measurer.width(line))
+                offset = 0 if text.align == "left" else remaining if text.align == "right" else remaining // 2
+                draw.text((text.x + 12 + offset, text_y), line, font=fitted.font, fill=text.color)
+                text_y += fitted.line_height
+            layouts.append(LayoutEntryModel(panel=panel.panel, bubble=index, kind="card", element_id=text.id,
+                box=fitted.box, safe_area=BoxModel(x=text.x, y=text.y, width=text.width, height=text.height),
+                font_size=fitted.font_size, lines=fitted.lines))
     for bubble_index, dialogue in enumerate(panel.dialogue, start=1):
         fitted = _fit_text(draw, font_path, dialogue)
         box = fitted.box
@@ -186,8 +206,25 @@ def render_carousel(
     return canvas, tuple(layouts)
 
 
+def _fit_card_text(draw: ImageDraw.ImageDraw, font_path: Path, text: CardTextModel) -> FittedText:
+    for font_size in range(MAX_FONT_SIZE, MIN_FONT_SIZE - 1, -2):
+        font = ImageFont.truetype(str(font_path), size=font_size)
+        measurer = TextMeasurer(draw=draw, font=font)
+        try:
+            lines = measurer.wrap(text.text, text.width - 24)
+        except RenderError:
+            continue
+        height = len(lines) * (font_size + 12)
+        if height + 24 <= text.height:
+            return FittedText(font=font, font_size=font_size, lines=lines, line_height=font_size + 12,
+                box=BoxModel(x=text.x + 12, y=text.y + (text.height - height) // 2,
+                    width=text.width - 24, height=height))
+    raise RenderError(f"information card text does not fit: {text.id}")
+
+
 def render_mock(episode_id: str, panel: PanelModel, revision: int) -> Image.Image:
-    seed_text = f"{episode_id}:{panel.model_dump_json()}:{revision}"
+    serialized = panel.model_dump_json(exclude={"information_card"} if panel.information_card is None else set())
+    seed_text = f"{episode_id}:{serialized}:{revision}"
     digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
     background = PALETTE[digest[0] % len(PALETTE)]
     image = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), background)

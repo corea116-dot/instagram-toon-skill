@@ -40,9 +40,15 @@ class BoxModel(StrictModel):
         return self
 
 
+class TailAnchorModel(StrictModel):
+    x: Annotated[int, Field(ge=0, le=CANVAS_WIDTH)]
+    y: Annotated[int, Field(ge=0, le=CANVAS_HEIGHT)]
+
+
 class DialogueModel(BoxModel):
     speaker: str
     text: Annotated[str, Field(min_length=1)]
+    tail_anchor: TailAnchorModel | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 def boxes_overlap(first: BoxModel, second: BoxModel) -> bool:
@@ -151,6 +157,31 @@ class PanelModel(StrictModel):
 
 
 class EpisodeScriptModel(StrictModel):
+    rendering_policy: Literal["legacy_contain", "frame_native_v1"] = Field(default="legacy_contain", exclude_if=lambda value: value == "legacy_contain")
+
+    def panel_sizes(self) -> tuple[CanvasSize, ...]:
+        if self.rendering_policy == "legacy_contain":
+            return ((CANVAS_WIDTH, CANVAS_HEIGHT),) * len(self.panels)
+        from frame_geometry import panel_sizes
+        return panel_sizes(self.output_layout or (1,) * len(self.panels))
+
+    @model_validator(mode="after")
+    def native_geometry(self) -> Self:
+        if self.rendering_policy != "frame_native_v1":
+            return self
+        if self.output_layout is None:
+            raise ValueError("frame_native_v1 requires output_layout")
+        for panel, (width, height) in zip(self.panels, self.panel_sizes(), strict=True):
+            boxes = list(panel.dialogue)
+            if panel.information_card:
+                card = panel.information_card
+                boxes += [card.area, card.presenter.area, *card.texts, *card.shapes]
+            if any(box.x + box.width > width or box.y + box.height > height for box in boxes):
+                raise ValueError(f"panel {panel.panel} geometry exceeds native frame {width}x{height}")
+            if any(d.tail_anchor and (d.tail_anchor.x > width or d.tail_anchor.y > height) for d in panel.dialogue):
+                raise ValueError(f"panel {panel.panel} tail anchor exceeds native frame")
+        return self
+
     schema_version: Literal["1.0", "1.1", "1.2"]
     episode_id: str
     title: str
@@ -317,6 +348,8 @@ class ContinuityModel(StrictModel):
 
 
 class PromptManifestModel(StrictModel):
+    rendering_policy: Literal["legacy_contain", "frame_native_v1"] = Field(default="legacy_contain", exclude_if=lambda value: value == "legacy_contain")
+    panel_sizes: tuple[CanvasSize, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
     schema_version: Literal["1.0"]
     panel: Annotated[int, Field(ge=1)]
     revision: Annotated[int, Field(ge=0)]
@@ -350,6 +383,8 @@ class LayoutEntryModel(StrictModel):
 
 
 class CompositionModel(StrictModel):
+    rendering_policy: Literal["legacy_contain", "frame_native_v1"] = Field(default="legacy_contain", exclude_if=lambda value: value == "legacy_contain")
+    panel_sizes: tuple[CanvasSize, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
     schema_version: Literal["1.0", "1.1"]
     canvas: CanvasSize
     layouts: tuple[LayoutEntryModel, ...]

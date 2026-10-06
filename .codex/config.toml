@@ -1,0 +1,43 @@
+[agents.toon_scout]
+description = "Instagram Toon keyword and official-source collection; no ranking by opinion or script writing."
+config_file = "agents/toon-sol-low.toml"
+
+[agents.toon_creator]
+description = "Instagram Toon idea, script and art direction in one continuing worker; coordinator owns final episode files."
+config_file = "agents/toon-sol-high.toml"
+
+[agents.toon_content_review]
+description = "Independent informational comic review: blind reading first, then official facts and all integrated content checks."
+config_file = "agents/toon-astra-high.toml"
+
+[agents.toon_visual_review]
+description = "Read-only final comic image inspection against approved script, references and mobile readability."
+config_file = "agents/toon-sol-medium.toml"
+
+[agents.toon_post_analyst]
+description = "Read-only analysis of the explicitly requested Instagram post under the link-analysis contract."
+config_file = "agents/toon-sol-medium.toml"
+
+[agents.toon_humor_review]
+description = "Independent humor premise/story critique; never review a draft you authored."
+config_file = "agents/toon-sol-high.toml"
+
+[agents.toon_language_continuity]
+description = "Humor-only dialogue or continuity review under the assigned bounded contract."
+config_file = "agents/toon-sol-medium.toml"
+
+[agents.toon_scout_retry]
+description = "Bounded retry of a failed browser collection task, only after low-effort collection fails."
+config_file = "agents/toon-sol-medium.toml"
+
+[agents.toon_visual_retry]
+description = "Read-only review of an ambiguous visual finding, only after the medium-effort visual review."
+config_file = "agents/toon-sol-high.toml"
+
+[agents.toon_motion_planner]
+description = "Motion graphics scene and direction planning from an existing comic: hook, timed dialogue, interactions, camera, sound cues and asset brief; no rendering."
+config_file = "agents/toon-astra-low.toml"
+
+[agents.toon_motion_producer]
+description = "Produce motion graphics from a reviewed plan: referenced source art, local voice and audio, animation, rendering and technical verification; preserve approved story."
+config_file = "agents/toon-sol-high.toml"

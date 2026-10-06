@@ -18,7 +18,7 @@ PLATFORMS: tuple[Platform, ...] = ("naver", "google")
 
 
 def _basis(evidence: KeywordEvidence, platform: Platform) -> PlatformBasis | None:
-    methods = ("monthly_volume",) if evidence.selection_policy == "naver_monthly" and platform == "naver" else METHODS
+    methods = ("monthly_volume",) if evidence.selection_policy in ("naver_monthly", "editorial_v1") and platform == "naver" else METHODS
     for method in methods:
         complete = [
             (index, batch)
@@ -89,7 +89,8 @@ def _official_event(candidate: KeywordCandidate, evidence: KeywordEvidence) -> b
 
 
 def select_topic(evidence: KeywordEvidence, requested: KeywordType) -> KeywordDecision:
-    monthly = evidence.selection_policy == "naver_monthly"
+    editorial = evidence.selection_policy == "editorial_v1"
+    monthly = evidence.selection_policy in ("naver_monthly", "editorial_v1")
     bases = tuple(
         basis
         for platform in (("naver",) if monthly else PLATFORMS)
@@ -171,6 +172,7 @@ def select_topic(evidence: KeywordEvidence, requested: KeywordType) -> KeywordDe
         rows.append(
             KeywordScore(
                 candidate_id=candidate.id,
+                editorial_total=candidate.editorial.total if editorial else None,
                 naver=naver,
                 google=google,
                 total=total,
@@ -208,14 +210,28 @@ def select_topic(evidence: KeywordEvidence, requested: KeywordType) -> KeywordDe
     winner = min(
         (item for item in pool if item.id in pool_ids),
         key=lambda item: (
+            -(item.editorial.total) if editorial else 0,
             -totals[item.id],
             -item.scores.total if isinstance(item, KeywordCandidate) else 0,
             -item.scores.opening_hook if isinstance(item, KeywordCandidate) else 0,
             item.id,
         ),
     )
+    if editorial:
+        final_order = sorted((c for c in pool if c.id in pool_ids),
+                             key=lambda c: (-c.editorial.total, -totals[c.id], c.id))
+        final_ranks = {c.id: i + 1 for i, c in enumerate(final_order)}
+        ranked_rows = tuple(row.model_copy(update={"final_rank": final_ranks.get(row.candidate_id)}) for row in ranked_rows)
+        demand_leaders = [row for row in ranked_rows if row.rank == 1]
+        leader_notes = []
+        for row in demand_leaders:
+            if row.candidate_id == winner.id:
+                leader_notes.append(f"{row.candidate_id}: selected")
+            else:
+                leader_notes.append(f"{row.candidate_id}: {row.rejection_reason or 'lower editorial total or stable tie-break'}")
+        reason += "; editorial_v1: AI editorial judgment, not measured Instagram performance; demand rank 1: " + "; ".join(leader_notes)
     scored = tuple(
-        row.model_copy(update={"rejection_reason": "lower monthly volume or tie-break" if monthly else "lower weighted score or tie-break"})
+        row.model_copy(update={"rejection_reason": "lower editorial total, monthly volume or stable tie-break" if editorial else "lower monthly volume or tie-break" if monthly else "lower weighted score or tie-break"})
         if row.candidate_id != winner.id and row.rejection_reason is None
         else row
         for row in ranked_rows

@@ -77,6 +77,7 @@ class ComposeOptions:
     episode_dir: Path
     mock: bool
     panel: int | None
+    recompose_only: bool = False
 
 
 def _prompt_text(
@@ -181,12 +182,14 @@ def _prompt_manifest(
         panel=panel.panel,
         revision=revision,
         mode=mode,
-        size=(CANVAS_WIDTH, CANVAS_HEIGHT),
+        size=script.panel_sizes()[panel.panel - 1],
+        rendering_policy=script.rendering_policy,
+        panel_sizes=script.panel_sizes() if script.rendering_policy == "frame_native_v1" else None,
         prompt=_prompt_text(
             panel,
             character_policy,
             wardrobe_text_for_panel(character_policy, panel.panel, script.panels),
-        ),
+        ) + (f" Native frame: {script.panel_sizes()[panel.panel - 1]}. Fill the whole frame with the scene, full bleed, no letterboxing or uniform blank top band. Keep faces, hands and key props away from crop edges and overlay areas; continue the background through overlay areas. Coordinates are native frame pixels." if script.rendering_policy == "frame_native_v1" else ""),
         negative_prompt=NEGATIVE_PROMPT,
         reference_images=reference_images,
         bubble_safe_areas=safe_areas,
@@ -209,6 +212,8 @@ def compose(options: ComposeOptions) -> Path:
         require_layout_preflight(options.episode_dir)
     except ValueError as exc:
         raise RenderError(str(exc)) from exc
+    if options.mock and options.recompose_only:
+        raise RenderError("--recompose-only cannot be combined with --mock")
     script = load_script(options.episode_dir)
     character_policy = load_character_policy(
         options.episode_dir, CHARACTER_BIBLE_PATH, SKILL_ROOT
@@ -245,7 +250,9 @@ def compose(options: ComposeOptions) -> Path:
         if prompt_path.is_file():
             previous_prompt = PromptManifestModel.model_validate_json(prompt_path.read_text(encoding="utf-8"))
             card_changed = previous_prompt.information_card != panel.information_card
-        if options.mock or partial or card_changed or not prompt_path.is_file():
+        if options.recompose_only and not prompt_path.is_file():
+            raise RenderError(f"recomposition requires the actual provider manifest: {prompt_path}")
+        if not options.recompose_only and (options.mock or partial or card_changed or not prompt_path.is_file()):
             prompt = _prompt_manifest(
                 script,
                 panel,
@@ -255,18 +262,26 @@ def compose(options: ComposeOptions) -> Path:
                 character_policy,
             )
             write_text_atomic(prompt_path, prompt.model_dump_json(indent=2) + "\n")
+        current_prompt = PromptManifestModel.model_validate_json(prompt_path.read_text(encoding="utf-8"))
+        if (current_prompt.rendering_policy != script.rendering_policy
+                or current_prompt.size != script.panel_sizes()[panel.panel - 1]
+                or (script.rendering_policy == "frame_native_v1" and current_prompt.panel_sizes != script.panel_sizes())):
+            raise RenderError("provider manifest rendering policy/size is stale; regenerate art")
         raw_path = raw_dir / f"panel-{panel.panel}.png"
         if options.mock:
-            save_png_atomic(render_mock(script.episode_id, panel, revision), raw_path)
+            from PIL import ImageOps
+            save_png_atomic(ImageOps.fit(render_mock(script.episode_id, panel, revision), script.panel_sizes()[panel.panel - 1]), raw_path)
         elif not raw_path.is_file():
             raise RenderError(f"raw panel is missing: {raw_path}")
-        carousel, panel_layouts = render_carousel(raw_path, panel, font_path)
+        carousel, panel_layouts = render_carousel(raw_path, panel, font_path, script.panel_sizes()[panel.panel - 1])
         save_png_atomic(carousel, paths.rendered_panels[panel.panel - 1])
         layouts.extend(panel_layouts)
     merged = merge_layouts(options.episode_dir, options.panel, tuple(layouts))
     manifest = CompositionModel(
         schema_version="1.1" if script.output_layout is not None else "1.0",
         canvas=(CANVAS_WIDTH, CANVAS_HEIGHT),
+        rendering_policy=script.rendering_policy,
+        panel_sizes=script.panel_sizes() if script.rendering_policy == "frame_native_v1" else None,
         layouts=merged,
         output_layout=script.output_layout,
     )
@@ -278,6 +293,7 @@ def compose(options: ComposeOptions) -> Path:
         len(script.panels),
         script.output_layout,
         options.panel,
+        rendering_policy=script.rendering_policy,
     )
     if options.panel is None:
         clear_obsolete_delivery_exports(options.episode_dir, paths)
@@ -291,10 +307,11 @@ def main(
     ],
     mock: Annotated[bool, typer.Option("--mock")] = False,
     panel: Annotated[int | None, typer.Option("--panel", min=1)] = None,
+    recompose_only: Annotated[bool, typer.Option("--recompose-only")] = False,
 ) -> None:
     try:
         result = compose(
-            ComposeOptions(episode_dir=episode_dir, mock=mock, panel=panel)
+            ComposeOptions(episode_dir=episode_dir, mock=mock, panel=panel, recompose_only=recompose_only)
         )
     except (OSError, RenderError, ValidationError) as error:
         typer.echo(f"compose failed for {episode_dir}: {error}", err=True)

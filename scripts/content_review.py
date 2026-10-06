@@ -210,13 +210,15 @@ def layout_sha256(script_path: Path) -> str:
                 "panel": panel.panel,
                 "text_budget": panel.text_budget,
                 "dialogue": [
-                    dialogue.model_dump(mode="json") for dialogue in panel.dialogue
+                    dialogue.model_dump(mode="json", exclude={"tail_anchor"} if dialogue.tail_anchor is None else set()) for dialogue in panel.dialogue
                 ],
                 **({"information_card": panel.information_card.model_dump(mode="json")} if panel.information_card else {}),
             }
             for panel in script.panels
         ],
     }
+    if script.rendering_policy == "frame_native_v1":
+        payload.update(rendering_policy=script.rendering_policy, panel_sizes=script.panel_sizes())
     return _canonical_sha256(payload)
 
 

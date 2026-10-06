@@ -77,9 +77,10 @@ def _panel_scale(group_size: int, offset: int) -> float:
     return min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT)
 
 
-def run_layout_preflight(episode_dir: Path) -> tuple[Path, LayoutPreflightModel]:
-    require_content_review(episode_dir)
-    require_content_lock(episode_dir)
+def run_layout_preflight(episode_dir: Path, *, draft: bool = False) -> tuple[Path, LayoutPreflightModel]:
+    if not draft:
+        require_content_review(episode_dir)
+        require_content_lock(episode_dir)
     brief = _modern_information_brief(episode_dir)
     if brief is None:
         raise ValueError(
@@ -110,8 +111,8 @@ def run_layout_preflight(episode_dir: Path) -> tuple[Path, LayoutPreflightModel]
                     text_characters += sum(len("".join(text.text.split())) for text in panel.information_card.texts)
                 if text_characters > DENSE_PANEL_CHARACTERS:
                     dense_count += 1
-                _, layouts = render_carousel(blank_path, panel, font_path)
-                scale = _panel_scale(group_size, offset)
+                _, layouts = render_carousel(blank_path, panel, font_path, script.panel_sizes()[panel.panel - 1])
+                scale = 1.0 if script.rendering_policy == "frame_native_v1" else _panel_scale(group_size, offset)
                 for layout in layouts:
                     effective = round(layout.font_size * scale)
                     bubbles.append(
@@ -149,7 +150,7 @@ def run_layout_preflight(episode_dir: Path) -> tuple[Path, LayoutPreflightModel]
         issues=tuple(issues),
         outcome="fail" if issues else "pass",
     )
-    output = episode_dir / "layout-preflight.json"
+    output = episode_dir / ("layout-diagnostic.json" if draft else "layout-preflight.json")
     write_text_atomic(output, record.model_dump_json(indent=2) + "\n")
     return output, record
 
@@ -187,9 +188,10 @@ def main(
         Path,
         typer.Option("--episode-dir", exists=True, file_okay=False, resolve_path=True),
     ],
+    draft: Annotated[bool, typer.Option("--draft")] = False,
 ) -> None:
     try:
-        output, record = run_layout_preflight(episode_dir)
+        output, record = run_layout_preflight(episode_dir, draft=draft)
     except (OSError, RenderError, ValueError, ValidationError) as error:
         typer.echo(f"layout preflight failed for {episode_dir}: {error}", err=True)
         raise typer.Exit(code=1) from error

@@ -1,0 +1,21 @@
+# Local results and runtime data
+.DS_Store
+__pycache__/
+*.py[cod]
+.codegraph
+.omx/
+.tools/
+episodes/
+node_modules/
+dist/
+.data/
+.env
+*.log
+test-results/
+# Character/style references stay local; keep directory placeholders
+assets/references/**/*.png
+assets/references/**/*.jpg
+assets/references/**/*.jpeg
+assets/references/**/*.webp
+assets/references/**/*.gif
+dashboard/evidence/

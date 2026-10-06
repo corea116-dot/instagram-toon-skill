@@ -18,6 +18,7 @@ from pydantic import ValidationError
 class LockMode(StrEnum):
     USER_ACCEPTED = "user_accepted"
     AUTOMATIC_CONTRACT = "automatic_contract"
+    USER_AUTHORIZED_RUN = "user_authorized_run"
 
 
 def main(

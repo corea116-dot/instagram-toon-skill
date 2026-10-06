@@ -31,6 +31,8 @@ def require_complete_composition(
     composition = CompositionModel.model_validate_json(
         composition_path.read_text(encoding="utf-8")
     )
+    if composition.rendering_policy != script.rendering_policy or (script.rendering_policy == "frame_native_v1" and composition.panel_sizes != script.panel_sizes()):
+        raise RenderError("partial regeneration requires matching rendering policy and frame sizes")
     if composition.output_layout != script.output_layout:
         raise RenderError("partial regeneration requires a matching output_layout")
 

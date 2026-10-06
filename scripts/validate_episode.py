@@ -138,7 +138,7 @@ def _check_brief_script_layout(episode_dir: Path) -> tuple[str, ...]:
     return ()
 
 
-def _image_issue(path: Path, exact_size: bool) -> str | None:
+def _image_issue(path: Path, exact_size: bool, target_size: tuple[int, int] = (CANVAS_WIDTH, CANVAS_HEIGHT)) -> str | None:
     try:
         with Image.open(path) as image:
             _ = image.load()
@@ -148,8 +148,8 @@ def _image_issue(path: Path, exact_size: bool) -> str | None:
         return f"invalid PNG {path}: {error}"
     if image_format != "PNG":
         return f"expected PNG format at {path}, got {image_format}"
-    if exact_size and size != (CANVAS_WIDTH, CANVAS_HEIGHT):
-        return f"expected 1080x1350 at {path}, got {size[0]}x{size[1]}"
+    if exact_size and size != target_size:
+        return f"expected {target_size[0]}x{target_size[1]} at {path}, got {size[0]}x{size[1]}"
     if not exact_size and (size[0] < 1024 or size[1] < 1024):
         return f"raw panel is below 1024px at {path}: {size[0]}x{size[1]}"
     return None
@@ -167,11 +167,15 @@ def _check_images(
         for number in range(1, panel_count + 1)
     )
     paths = delivery_paths(episode_dir, panel_count, output_layout)
-    final_paths = paths.rendered_panels + paths.final_images
-    for path in raw_paths:
-        if path.is_file() and (issue := _image_issue(path, exact_size=True)):
-            issues.append(issue)
-    for path in final_paths:
+    try:
+        script = EpisodeScriptModel.model_validate_json((episode_dir / "script.json").read_text())
+    except (OSError, ValidationError) as error:
+        return (f"invalid script for image validation: {error}",)
+    for group in (raw_paths, paths.rendered_panels):
+        for path, size in zip(group, script.panel_sizes(), strict=True):
+            if path.is_file() and (issue := _image_issue(path, exact_size=True, target_size=size)):
+                issues.append(issue)
+    for path in paths.final_images:
         if path.is_file() and (issue := _image_issue(path, exact_size=True)):
             issues.append(issue)
     return tuple(issues)
@@ -203,7 +207,9 @@ def _check_prompts(
             issues.append(
                 f"prompt panel mismatch at {path}: expected {number}, got {prompt.panel}"
             )
-        if prompt.size != (CANVAS_WIDTH, CANVAS_HEIGHT):
+        if prompt.rendering_policy != script.rendering_policy or (script.rendering_policy == "frame_native_v1" and prompt.panel_sizes != script.panel_sizes()):
+            issues.append(f"prompt rendering policy/frame sizes are stale at {path}")
+        if prompt.size != script.panel_sizes()[number - 1]:
             issues.append(f"prompt size mismatch at {path}: {prompt.size}")
         if not prompt.negative_prompt.strip():
             issues.append(f"negative prompt is empty at {path}")
@@ -236,11 +242,13 @@ def _check_layout(
         script = EpisodeScriptModel.model_validate_json((episode_dir / "script.json").read_text(encoding="utf-8"))
     except (OSError, ValidationError) as error:
         return (f"invalid script for composition validation: {error}",)
+    if manifest.rendering_policy != script.rendering_policy or (script.rendering_policy == "frame_native_v1" and manifest.panel_sizes != script.panel_sizes()):
+        issues.append("composition rendering policy/frame sizes are stale")
     scales: dict[int, float] = {}
     next_number = 1
     for group_size in script.output_layout or (1,) * len(script.panels):
         for offset in range(group_size):
-            scales[next_number + offset] = _panel_scale(group_size, offset)
+            scales[next_number + offset] = 1.0 if script.rendering_policy == "frame_native_v1" else _panel_scale(group_size, offset)
         next_number += group_size
     for panel in script.panels:
         if not panel.information_card:
@@ -269,6 +277,12 @@ def _check_layout(
             if boxes_overlap(entry.box, card.presenter.area) or any(boxes_overlap(entry.box, other.box) for other in entries[index + 1:]):
                 issues.append(f"panel {panel.panel} card/dialogue/presenter overlap")
     for layout in manifest.layouts:
+        if not 1 <= layout.panel <= len(script.panels):
+            issues.append("composition references unknown panel")
+            continue
+        width, height = script.panel_sizes()[layout.panel - 1]
+        if any(b.x + b.width > width or b.y + b.height > height for b in (layout.box, layout.safe_area)):
+            issues.append(f"panel {layout.panel} composition exceeds native frame")
         box = layout.box
         safe = layout.safe_area
         inside_safe = (

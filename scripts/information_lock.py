@@ -16,7 +16,7 @@ class ContentLockModel(StrictModel):
     schema_version: Literal["1.0"]
     episode_id: NonBlankString
     content_sha256: NonBlankString
-    mode: Literal["user_accepted", "automatic_contract"]
+    mode: Literal["user_accepted", "automatic_contract", "user_authorized_run"]
     locked_at: AwareDatetime
     approval_note: NonBlankString
 
@@ -66,7 +66,7 @@ def require_content_lock(episode_dir: Path) -> None:
 
 def write_content_lock(
     episode_dir: Path,
-    mode: Literal["user_accepted", "automatic_contract"],
+    mode: Literal["user_accepted", "automatic_contract", "user_authorized_run"],
     approval_note: str,
     locked_at: datetime,
 ) -> Path:

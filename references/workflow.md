@@ -1,6 +1,6 @@
 # Instagram Toon Workflow
 
-Current topic-search policy overrides the legacy 60/40 and proxy instructions below: follow `keyword-evidence.md`, rank Naver monthly PC + mobile counts, and use Google only as auxiliary evidence. For Naver's `최근 한달간`, preserve the provider wording plus observation timestamp; exact start/end dates are optional and must not be invented. Missing counts still cause hold, but absent exact dates alone do not.
+Current topic-search policy overrides the legacy 60/40 and proxy instructions below: follow `keyword-evidence.md` and `topic-editorial.md`: new information ranks explicit editorial judgments then Naver monthly PC + mobile counts; humor ranks monthly counts first. Google is auxiliary only. Detailed collection remains five candidates; new information begins with a source-backed lightweight pool of up to fifteen. For Naver's `최근 한달간`, preserve the provider wording plus observation timestamp; exact start/end dates are optional and must not be invented. Missing counts still cause hold, but absent exact dates alone do not.
 
 Use this workflow inside Codex Desktop, Codex CLI, or an IDE extension. Do not build or require a separate web application. The current Codex agent is the coordinator; delegate bounded specialist work to native Codex subagents and show progress, revision reasons, and QA results in the chat.
 
@@ -118,16 +118,16 @@ Inspect the raw panels against the final script, `references/visual-rules.md`, a
 The stable provider boundary is:
 
 ```text
-prompts/panel-N.json -> image provider -> raw/panel-N.png (1080x1350)
+prompts/panel-N.json -> image provider -> raw/panel-N.png (manifest size)
 ```
 
-For version 1, prefer the image generation feature available to the current Codex surface. In mock mode, `compose_episode.py` deterministically creates the same `raw/panel-N.png` contract without a network call. A future `scripts/generate_panel.py` may implement the OpenAI Image API, but it must consume `schema_version`, `panel`, `revision`, `mode`, `size`, `prompt`, `negative_prompt`, `reference_images`, `bubble_safe_areas`, and `continuity` from the same prompt JSON and produce the same PNG path; composition, validation, and history scripts must not import or call a provider SDK. Every provider must output an exact 1080x1350 PNG.
+For version 1, prefer the image generation feature available to the current Codex surface. In mock mode, `compose_episode.py` deterministically creates the same `raw/panel-N.png` contract without a network call. A future `scripts/generate_panel.py` may implement the OpenAI Image API, but it must consume `schema_version`, `panel`, `revision`, `mode`, `size`, `prompt`, `negative_prompt`, `reference_images`, `bubble_safe_areas`, and `continuity` from the same prompt JSON and produce the same PNG path; composition, validation, and history scripts must not import or call a provider SDK. Normalize provider art proportionally to manifest size before lettering; `frame_native_v1` uses native slot dimensions, legacy uses 1080×1350.
 
 Store shared character/style references directly under `assets/references/styles/`; every supported image directly in that folder is auto-attached without editing memory JSON. Store separate character-only images under `assets/references/characters/` and register those paths in the character bible. Do not embed image binaries in JSON.
 
 ## 5. Compose deterministically
 
-Insert Korean dialogue only after raw art exists. The composer owns font selection, wrapping, font-size reduction, bubble geometry, placement, the selected page layout, PNG encoding, and file names. Generated art remains text-free.
+Insert Korean dialogue only after raw art exists. The composer owns font selection, wrapping, font-size reduction, bubble geometry, placement, the selected page layout, PNG encoding, and file names. Generated art remains text-free. Use the common body-and-tail union renderer for every speech bubble; apply the seam-free composition and final-review rules in `visual-rules.md`.
 
 Run a full mock composition:
 

@@ -46,6 +46,31 @@ def informational_payload() -> dict:
     return payload
 
 
+def editorial_payload() -> dict:
+    """Synthetic judgments and provenance, never observed account performance."""
+    payload = informational_payload()
+    payload['selection_policy'] = 'editorial_v1'
+    domains = ['government_support', 'salary_consumption', 'investment', 'housing', 'housing']
+    for i, c in enumerate(payload['candidates']):
+        rating = {'value': 2 if i == 1 else 1, 'reason': 'SYNTHETIC editorial judgment'}
+        c['editorial'] = {
+            'reader_situation': '합성 독자 상황', 'opening_question': c['reader_question'],
+            'answer_action': '합성 조건을 확인한다', 'save_share_use': '조건 확인 시 재사용',
+            'reader_relevance': rating.copy(), 'episode_clarity': rating.copy(),
+            'practical_value': rating.copy(), 'judgment_kind': 'ai_editorial_judgment',
+        }
+    payload['discovery'] = {
+        'schema_version': '1.0', 'researched_on': payload['researched_on'],
+        'candidates': [dict(id=c['id'], keyword=c['keyword'], domain=domains[i],
+                            source_kind='observed_related_keyword', source_reference='https://example.test/synthetic',
+                            observed_on=payload['researched_on'], audience_relevance='합성 독자 관련성',
+                            shortlist=True, decision_reason='합성 후보 비교용')
+                       for i, c in enumerate(payload['candidates'])],
+        'coverage': {d: 'SYNTHETIC coverage' for d in set(domains)},
+    }
+    return payload
+
+
 def test_no_humor_selects_with_identical_weighting_and_official_refs(tmp_path: Path) -> None:
     evidence = keyword_evidence_adapter.validate_python(informational_payload())
     decision = select_topic(evidence, "trending")
@@ -161,9 +186,10 @@ def test_schema_defaults_to_information_with_explicit_humor_option(tmp_path: Pat
 
 
 def test_info_cli_selected_and_hold_do_not_change_history(tmp_path: Path) -> None:
-    payload = informational_payload()
+    payload = editorial_payload()
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     payload["researched_on"] = now.date().isoformat()
+    payload["discovery"]["researched_on"] = payload["researched_on"]
     for source in payload["sources"]:
         source["accessed_at"] = now.isoformat()
     for batch in payload["batches"]:

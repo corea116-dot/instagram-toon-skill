@@ -1,0 +1,25 @@
+{
+  "name": "툰 작업실",
+  "short_name": "툰 작업실",
+  "description": "인스타툰을 만들고 확인하는 나의 작업 공간",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f4",
+  "theme_color": "#f7f8f4",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

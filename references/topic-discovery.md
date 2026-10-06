@@ -16,7 +16,7 @@ Read the next type through `topic_search.py plan`, not by calendar day or infere
 
 ## Collect with Aside, decide locally
 
-Read `aside-browser` and run its current `aside guide` before using the browser. Use `aside exec` for bounded collection. There is no mandatory `$ulw-research` stage. Aside collects observations; the local selector ranks monthly counts. Do not ask the browser agent to invent values, choose the winner, or draft the comic.
+Read `aside-browser` and run its current `aside guide` before using the browser. Use a supported Aside execution route for bounded collection. Check the current guide/connection once. If a nested browser-agent model is unavailable, do not repeat it; use the documented direct REPL on the same browser and authorized account. Batch independent reads, keep navigation-dependent actions sequential. There is no mandatory `$ulw-research` stage. Aside collects observations; the coordinator adds concise editorial judgments and the local selector ranks them with observed demand. For current information, read `references/topic-editorial.md`; humor retains monthly-first selection. Do not ask the browser agent to invent values, choose the winner, or draft the comic.
 
 From the skill root:
 
@@ -27,7 +27,7 @@ uv run scripts/topic_search.py schema --output /absolute/project/keyword-evidenc
 
 Read `references/keyword-evidence.md` for the exact input contract. Give Aside the requested type, audience/topic filters, banned/duplicate constraints, the evidence schema, and a short task along these lines:
 
-> Research five Korean keywords for 20–30대 사회초년생. In Naver Ads keyword tool, record exact input/returned terms, monthly PC and mobile counts separately, reporting definition/window, region, access time and URL. Preserve `<10` and ranges verbatim, never as zero. Google Trends may support momentum but never substitutes for counts. Check official facts and dated triggers. Return observations and missing-data reasons, not a winner. Use existing sessions or explicitly authorized login only. Do not register, accept new terms, change settings, create ads, enable APIs, pay, publish, upload files or bypass restrictions.
+> Collect up to fifteen lightweight source-backed discoveries across government support, salary/consumption, investment and housing. Record origin, date and audience relevance. Return observations, not a winner. After the coordinator narrows the pool, research only the five shortlisted Korean keywords for 20–30대 사회초년생. In Naver Ads keyword tool, record exact input/returned terms, monthly PC and mobile counts separately, reporting definition/window, region, access time and URL. Preserve `<10` and ranges verbatim, never as zero. Google Trends may support momentum but never substitutes for counts. Check official facts and dated triggers. Return observations and missing-data reasons, not a winner. Use existing sessions or explicitly authorized login only. Do not register, accept new terms, change settings, create ads, enable APIs, pay, publish, upload files or bypass restrictions.
 
 Use `aside exec --permission guard` if supported. Reuse explicit authorization for the user's Naver blog account within scope; query Aside memory if account choice is unclear and never expose credentials. Stop for user action at MFA, registration or new terms. Login permission does not authorize payment, ads or API setup. API setup is not a prerequisite. If Aside is unavailable, report it; installation or a materially different collector requires user direction.
 
@@ -37,15 +37,15 @@ Preserve only short observations, source metadata, and the evidence needed to re
 
 Naver's provider wording `최근 한달간` plus `observed_at` is a valid period record; do not require exact start/end dates if the tool omits them. Collect the five terms with the same definition/settings on the same day. Follow `keyword-evidence.md` for fields; no extra chart lookups solely for dates and no measured-growth claim from an undated snapshot.
 
-Collect **exactly five real candidates** with the content-type-specific fields in `references/keyword-evidence.md`. Information candidates compare demand, reader question, audience fit, official support, safety and duplication; do not draft five detailed stories. Include rejected candidates/reasons. Never fabricate missing candidates; fewer than five means preserve partial research and hold.
+For information, first normalize the lightweight discovery pool and retain shortlist/rejection reasons using `topic_search.py pool` as described in `topic-editorial.md`. Prefer at least three shortlisted territories, or record a user-scope/evidence exception. Then collect **exactly five real detailed candidates** with the content-type-specific fields in `references/keyword-evidence.md`. Information candidates compare demand, reader question, audience fit, official support, safety and duplication; do not draft five detailed stories. Include rejected candidates/reasons. Never fabricate missing candidates; fewer than five means preserve partial research and hold.
 
-New runs require `selection_policy: naver_monthly`. Collect a complete comparable Naver `monthly_volume` batch for five candidates: `pc_searches`, `mobile_searches`, and their sum as `value`. Definitions, period, region and filters must match. Preserve exact input/returned terms and actual reporting period; never invent a calendar month or substitute a related term's count.
+New information requires `selection_policy: editorial_v1`; humor requires `selection_policy: naver_monthly`. Collect a complete comparable Naver `monthly_volume` batch for five candidates: `pc_searches`, `mobile_searches`, and their sum as `value`. Definitions, period, region and filters must match. Preserve exact input/returned terms and actual reporting period; never invent a calendar month or substitute a related term's count.
 
-Rank directly by monthly PC + mobile searches; no 60/40 weighting. Google Trends is auxiliary momentum/type evidence, never volume points. Missing Google data does not block a valid Naver comparison. Missing/incomplete Naver counts do block it. Ranges, `<10`, forecasts and estimates are not exact counts: retain raw observations, omit the numeric value and hold. Never pad with zero or fall back to relative proxies. Historical records without the new policy retain their original computation.
+Information ranks within the eligible type tier by editorial total, then monthly PC + mobile searches, then ascending ID. Humor ranks monthly counts first. Neither uses 60/40 weighting. Google Trends is auxiliary momentum/type evidence, never volume points. Missing Google data does not block a valid Naver comparison. Missing/incomplete Naver counts do block it. Ranges, `<10`, forecasts and estimates are not exact counts: retain raw observations, omit the numeric value and hold. Never pad with zero or fall back to relative proxies. Historical records without the new policy retain their original computation.
 
-Show the monthly ranking and eligibility/type rejections. Counts establish rank only within this cohort, not global popularity or guaranteed Instagram reach. Verify the winner's official facts before script handoff; if facts fail, mark the gate failed and recompute.
+Show both monthly demand rank and final editorial rank, plus eligibility/type rejections and why the demand leader was not selected. Counts establish rank only within this cohort, not global popularity or guaranteed Instagram reach. Verify the winner's official facts before script handoff; if facts fail, mark the gate failed and recompute.
 
-Keyword score is primary after eligibility and requested-type/fallback filtering. Information ties use ascending candidate ID; humor ties use story score, hook and ID. Use the selector result, not an agent's preferred winner. High demand cannot rescue failed gates.
+After eligibility and requested-type/fallback filtering, information uses the explicit three 0–2 editorial judgments in `topic-editorial.md`, then monthly counts and ID. These are AI editorial judgments, never measured Instagram performance or success probabilities. Humor uses monthly counts, then story score, hook and ID. Use the selector result, not an agent's preferred winner. High demand cannot rescue failed gates.
 
 ## Timely and evergreen selection
 
@@ -61,7 +61,7 @@ For selected policy, financial, economy, or investing information, verify claims
 
 ## Information eligibility
 
-Evidence 1.1 has `content_type: informational` and four gates: `audience_fit`, `source_relevance`, `safety`, `duplicate`. All must pass and official supporting sources must resolve. It has no humor engine, hook/payoff seed or story score. Elaborate the selected question into a brief 1.3 question-answer-action contract only after selection. See `informational-workflow.md`.
+Evidence 1.1 has `content_type: informational` and four gates: `audience_fit`, `source_relevance`, `safety`, `duplicate`. All must pass and official supporting sources must resolve. Under editorial_v1 it also requires discovery provenance and compact editorial directions; it has no humor engine or hook/payoff seed. Preserve the selected four-line direction without drafting alternate scripts. Elaborate the selected question into a brief 1.3 question-answer-action contract only after selection. See `informational-workflow.md`.
 
 ## Preserve the existing story gates (humor evidence 1.0 only)
 

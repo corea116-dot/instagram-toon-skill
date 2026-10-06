@@ -85,27 +85,10 @@ def _copy_panel(source_path: Path, output_path: Path) -> None:
         save_png_atomic(source.convert("RGB"), output_path)
 
 
-def grid_geometry(
-    count: int,
-) -> tuple[tuple[tuple[int, int], ...], tuple[tuple[int, int], ...]]:
-    match count:
-        case 2:
-            return ((1008, 630), (1008, 630)), ((36, 30), (36, 690))
-        case 3:
-            return (
-                ((1008, 594), (492, 660), (492, 660)),
-                ((36, 30), (36, 660), (552, 660)),
-            )
-        case 4:
-            return (
-                ((492, 621),) * 4,
-                ((36, 30), (552, 30), (36, 699), (552, 699)),
-            )
-        case _:
-            raise RenderError(f"unsupported page layout: {count} panels")
+from frame_geometry import grid_geometry
 
 
-def _render_grid(sources: tuple[Path, ...], output_path: Path) -> None:
+def _render_grid(sources: tuple[Path, ...], output_path: Path, *, native: bool = False) -> None:
     tile_sizes, positions = grid_geometry(len(sources))
     grid = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), GRID_BACKGROUND)
     grid_draw = ImageDraw.Draw(grid)
@@ -113,7 +96,18 @@ def _render_grid(sources: tuple[Path, ...], output_path: Path) -> None:
         sources, tile_sizes, positions, strict=True
     ):
         with Image.open(source_path) as source:
-            panel = ImageOps.contain(source.convert("RGB"), tile_size)
+            if native and source.size != tile_size:
+                raise RenderError(f"native composed panel must be {tile_size}, got {source.size}")
+            panel = source.convert("RGB") if native else ImageOps.contain(source.convert("RGB"), tile_size)
+        if native:
+            # Border lives entirely in the gutter, never on lettered pixels.
+            grid_draw.rectangle(
+                (position[0] - 6, position[1] - 6,
+                 position[0] + tile_size[0] + 5, position[1] + tile_size[1] + 5),
+                outline=(58, 48, 43), width=6,
+            )
+            grid.paste(panel, position)
+            continue
         tile = Image.new("RGB", tile_size, GRID_BACKGROUND)
         offset = (
             (tile_size[0] - panel.width) // 2,
@@ -144,6 +138,7 @@ def render_delivery(
     panel_count: int,
     output_layout: tuple[int, ...] | None,
     target: int | None,
+    rendering_policy: str = "legacy_contain",
 ) -> DeliveryPaths:
     paths = delivery_paths(episode_dir, panel_count, output_layout)
     for page in paths.pages:
@@ -152,9 +147,13 @@ def render_delivery(
                 paths.rendered_panels[number - 1] for number in page.panel_numbers
             )
             if len(sources) == 1:
+                if rendering_policy == "frame_native_v1":
+                    with Image.open(sources[0]) as source:
+                        if source.size != (CANVAS_WIDTH, CANVAS_HEIGHT):
+                            raise RenderError("native single panel size mismatch")
                 _copy_panel(sources[0], page.output_path)
             else:
-                _render_grid(sources, page.output_path)
+                _render_grid(sources, page.output_path, native=rendering_policy == "frame_native_v1")
     return paths
 
 

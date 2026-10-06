@@ -12,6 +12,12 @@ Export every final PNG at exactly 1080x1350 pixels in RGB or RGBA mode.
 - For informational cards, reserve card and presenter areas too. The same panel must show a recognizable, substantial character explaining the card through a speech bubble and a relevant gesture or gaze. No card-only slides or decorative character stickers. Choose table/calendar/comparison/sequence or another arrangement for the content rather than a repeated fixed template; the information workflow owns the full rule.
 - Judge legibility at mobile-feed size, not only at full resolution.
 
+## Speech-bubble composition
+
+For information and humor, every deterministically composed speech bubble has one white body-and-tail shape with a continuous outer outline. Use `scripts/rendering.py` (`_draw_speech_bubble`); do not independently outline the rounded body and triangle, which introduces a horizontal seam at their join. This applies to default and speaker-anchored tails in every output layout. Keep the interior of the join white and open while retaining the outer body and tail edges.
+
+During the existing final-page visual review, check body-to-tail joins for internal strokes, gaps and broken outlines. An internal horizontal join line is a composition defect: correct the common compositor and recompose the affected pages from their existing raw art. Recheck the changed bubbles and readability; unchanged content does not need another content review.
+
 ## Reference inputs
 
 Resolve the `assets/references/styles` directory marker in both memory JSON files by running `uv run scripts/active_reference.py` just before prompt creation. It returns every non-hidden supported image directly in `styles/`, in filename order, or every supported image in `current/` if `styles/` is empty. For every panel, attach resolved character paths first, then all resolved primary style paths, deduplicating shared images, then explicitly allowed secondary references. Use secondary references only when the user explicitly asks for them. Never attach the directory marker or a removed image from a prior prompt. Paths are project-relative and should normally live under:
@@ -63,3 +69,9 @@ When VisualCriticAgent flags a panel, preserve every passing panel. Revise only 
 Reject and revise a panel for identity drift, malformed or extra hands, fused or floating props, missing scripted actions or cast, unexplained continuity jumps, occupied bubble-safe space, illegible composition at mobile size, palette/style drift, or any generated text-like marks. A primary-reference style failure includes a dominant color outside the approved palette, incidental clutter that competes with the action/text, a copied reference scene, or a mood that misses the planned tone. A necessary setting or supporting character is not itself a style failure. Crop or color differences alone are not grounds for regeneration when intentional and continuous.
 
 For card panels, also reject a missing explaining character/bubble, card text covering the character, illegible card text, or visual grouping that misstates a condition. For character-led panels, do not demand a card; check the meaningful action and information against the script. Check the whole sequence for unnecessary cards and repetitive layouts. A JSON presenter box alone is not visual evidence. Inspect the final composited page at its delivered size.
+
+## Frame-first art and fill check
+
+For `frame_native_v1`, storyboard each actual output slot before generating art. Compose wide/short slots as wide/short scenes; continue the scene to all four frame edges, including behind planned overlays. Do not reserve a uniform blank upper band or bake in borders/gutters. Keep recognizable faces, hands and essential props crop-safe and outside dialogue/card overlays. Crop raw art proportionally before lettering, then fit text in native pixels.
+
+During the existing ordered final-page visual review, inspect every tile for scene fill, artificial side/top blank bands, distorted proportions, cut faces/hands/props, cropped lettering and mobile readability. Intentional negative space is permitted when the scene calls for it; a numeric occupancy threshold cannot establish visual quality. Record any failure in the existing visual findings and revise only affected panels.

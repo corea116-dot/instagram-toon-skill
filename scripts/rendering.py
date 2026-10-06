@@ -8,7 +8,7 @@ from pathlib import Path
 import tempfile
 from typing import Final
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
 
 from episode_models import (
     BoxModel,
@@ -135,11 +135,30 @@ def _fit_text(
     raise RenderError(f"dialogue does not fit its safe area: {dialogue.text!r}")
 
 
+def _draw_speech_bubble(draw: ImageDraw.ImageDraw, box: BoxModel, tail_x: int, tip_x: int) -> None:
+    """Outline the union of body and tail so their join has no internal stroke."""
+    border = 4
+    mask = Image.new("L", (box.width + 2 * border + 1, box.height + 2 * border + 1))
+    shape = ImageDraw.Draw(mask)
+    body_bottom = border + box.height - TAIL_HEIGHT
+    shape.rounded_rectangle(
+        (border, border, border + box.width, body_bottom), radius=32, fill=255,
+    )
+    base = border + tail_x - box.x
+    tip = border + tip_x - box.x
+    shape.polygon(((base - 18, body_bottom - 2), (base + 18, body_bottom - 2),
+                   (tip, border + box.height)), fill=255)
+    origin = (box.x - border, box.y - border)
+    draw.bitmap(origin, mask, fill=(35, 38, 47))
+    draw.bitmap(origin, mask.filter(ImageFilter.MinFilter(2 * border + 1)), fill=(255, 255, 255))
+
+
 def render_carousel(
-    raw_path: Path, panel: PanelModel, font_path: Path
+    raw_path: Path, panel: PanelModel, font_path: Path,
+    target_size: tuple[int, int] = (CANVAS_WIDTH, CANVAS_HEIGHT)
 ) -> tuple[Image.Image, tuple[LayoutEntryModel, ...]]:
     with Image.open(raw_path) as source:
-        canvas = ImageOps.fit(source.convert("RGB"), (CANVAS_WIDTH, CANVAS_HEIGHT))
+        canvas = ImageOps.fit(source.convert("RGB"), target_size, method=Image.Resampling.LANCZOS)
     draw = ImageDraw.Draw(canvas)
     layouts: list[LayoutEntryModel] = []
     if panel.information_card:
@@ -164,24 +183,15 @@ def render_carousel(
     for bubble_index, dialogue in enumerate(panel.dialogue, start=1):
         fitted = _fit_text(draw, font_path, dialogue)
         box = fitted.box
-        body_bottom = box.y + box.height - TAIL_HEIGHT
-        draw.rounded_rectangle(
-            (box.x, box.y, box.x + box.width, body_bottom),
-            radius=32,
-            fill=(255, 255, 255),
-            outline=(35, 38, 47),
-            width=4,
-        )
         tail_x = box.x + (box.width // 3)
-        draw.polygon(
-            (
-                (tail_x - 18, body_bottom - 2),
-                (tail_x + 18, body_bottom - 2),
-                (tail_x, box.y + box.height),
-            ),
-            fill=(255, 255, 255),
-            outline=(35, 38, 47),
-        )
+        tip_x = tail_x
+        if dialogue.tail_anchor is not None:
+            if dialogue.tail_anchor.y < box.y + box.height:
+                raise RenderError("place the bubble above its speaker tail anchor")
+            # Keep the tail inside the reserved bubble box, aimed toward its speaker.
+            tail_x = max(box.x + 24, min(box.x + box.width - 24, dialogue.tail_anchor.x))
+            tip_x = max(box.x + 4, min(box.x + box.width - 4, dialogue.tail_anchor.x))
+        _draw_speech_bubble(draw, box, tail_x, tip_x)
         text_y = box.y + PADDING
         measurer = TextMeasurer(draw=draw, font=fitted.font)
         for line in fitted.lines:

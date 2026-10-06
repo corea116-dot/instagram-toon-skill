@@ -7,6 +7,7 @@ from episode_models import PRIMARY_HUMOR_ENGINE_IDS, NonBlankString, StrictModel
 from pydantic import AwareDatetime, ConfigDict, Field, HttpUrl, TypeAdapter, model_validator
 from pydantic_core import PydanticCustomError
 from topic_research_models import RichTopicCandidateModel
+from topic_editorial import DiscoveryPool, EditorialDirection, keyword_key
 
 KeywordType = Literal["trending", "evergreen"]
 Platform = Literal["naver", "google"]
@@ -63,6 +64,7 @@ class InformationalKeywordCandidate(StrictModel):
     ]
     keyword_type: KeywordType
     demand_reason: NonBlankString
+    editorial: EditorialDirection | None = None
     reader_question: NonBlankString
     audience_fit: NonBlankString
     source_relevance: NonBlankString
@@ -216,7 +218,7 @@ class KeywordEvidence(StrictModel):
                     "official facts need an official source reference",
                 )
         for batch in self.batches:
-            if self.selection_policy == "naver_monthly" and batch.platform == "naver" and batch.method == "monthly_volume":
+            if self.selection_policy in ("naver_monthly", "editorial_v1") and batch.platform == "naver" and batch.method == "monthly_volume":
                 for item in batch.values:
                     if item.pc_searches is None or item.mobile_searches is None or item.value != item.pc_searches + item.mobile_searches:
                         raise PydanticCustomError(
@@ -248,9 +250,43 @@ class KeywordEvidence(StrictModel):
 class InformationalKeywordEvidence(KeywordEvidence):
     schema_version: Literal["1.1"]
     content_type: Literal["informational"]
+    selection_policy: Literal["legacy_weighted", "naver_monthly", "editorial_v1"] = "legacy_weighted"
+    discovery: DiscoveryPool | None = None
     candidates: Annotated[
         tuple[InformationalKeywordCandidate, ...], Field(min_length=5, max_length=5)
     ]
+
+
+    @model_validator(mode="after")
+    def editorial_contract(self) -> Self:
+        if self.selection_policy != "editorial_v1":
+            if self.discovery is not None or any(c.editorial is not None for c in self.candidates):
+                raise ValueError("editorial inputs require editorial_v1; historical policies must not ignore them")
+            return self
+        if self.discovery is None:
+            raise ValueError("editorial_v1 requires discovery provenance")
+        report = self.discovery.normalized()
+        if report["status"] != "ready":
+            raise ValueError("; ".join(report["reasons"]))
+        if self.discovery.researched_on != self.researched_on:
+            raise ValueError("discovery review date must match research date")
+        if set(report["shortlisted_ids"]) != {c.id for c in self.candidates}:
+            raise ValueError("detailed candidates must exactly match discovery shortlist")
+        sources = {source.id: source for source in self.sources}
+        for batch in self.batches:
+            if batch.platform == "naver" and batch.method == "monthly_volume":
+                dates = {sources[item.source_id].accessed_at.date() for item in batch.values}
+                if len(dates) > 1 or (batch.observed_at is not None and dates != {batch.observed_at.date()}):
+                    raise ValueError("editorial_v1 Naver counts must share the same observation day")
+        origins = {c.id: c for c in self.discovery.candidates}
+        for candidate in self.candidates:
+            if keyword_key(candidate.keyword) != keyword_key(origins[candidate.id].keyword):
+                raise ValueError("detailed keyword differs from discovery origin")
+            if candidate.editorial is None:
+                raise ValueError("every candidate requires a compact editorial direction")
+            if candidate.reader_question != candidate.editorial.opening_question:
+                raise ValueError("reader_question must preserve editorial opening_question")
+        return self
 
 
 KeywordEvidenceDocument = Annotated[
@@ -271,6 +307,8 @@ class KeywordScore(StrictModel):
     google: float | None
     total: float | None
     rank: int | None = None
+    editorial_total: int | None = None
+    final_rank: int | None = None
     rejection_reason: str | None
 
 

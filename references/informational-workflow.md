@@ -97,7 +97,7 @@ Allow at most two content revisions. Recheck only affected findings plus connect
 
 ## 5. Lock the words before generating art
 
-During calibration, stop after the passed script and show the user only the exact topic, one-line answer, all dialogue and card text with intended form, final action line, and material conditions/limitations. After explicit acceptance, run:
+During calibration, unless the user explicitly authorized this run through finished images, stop after the passed script and show the user only the exact topic, one-line answer, all dialogue and card text with intended form, final action line, and material conditions/limitations. After explicit acceptance, run:
 
 ```bash
 uv run scripts/lock_content.py \
@@ -107,6 +107,8 @@ uv run scripts/lock_content.py \
 ```
 
 This writes `content-lock.json` bound to the semantic content hash. Until the user explicitly adopts this 1.3 baseline for unattended daily production, do not use `automatic_contract`. After that separate adoption, an automatic run may lock a passed contract with `automatic_contract` and continue to local `review_pending`; this never authorizes posting.
+
+For an explicitly authorized one-run finished episode, use `--mode user_authorized_run` and quote that request in `approval_note`. This does not record script acceptance or authorize unattended future episodes.
 
 Any topic, fact, panel job, scope, speaker, dialogue or card wording/meaning change invalidates both review and lock. Moving exact words from speech to a card still changes presentation and requires an affected-content check; do not assume an earlier dialogue-only review covers it. Geometry-only bubble/card/character-area changes do not invalidate semantic review, but do invalidate layout preflight. Reuse still-current official evidence; do not repeat topic search for a presentation change.
 
@@ -136,3 +138,9 @@ Inspect final pages once in reading order for identity, hands/props, continuity,
 `content_sha256` covers the brief's meaning and the script's story/visible words including card content and explanatory interaction, without placement geometry. `layout_sha256` covers output grouping, visible text, text budget and bubble/card/character geometry. A geometry-only edit reruns layout/visual checks, not official-source/content review.
 
 Capture one compact timing record for research, writing, review, preflight, generation, composition and final review, plus content/visual/generation revision counts. Count overlapping intervals once. Do not claim speed improvement before at least three comparable 1.3 pilot runs. Stop at local `review_pending`; never post automatically.
+
+Production handoffs and commands: see `efficient-production.md`. The draft diagnostic never replaces the reviewed/locked preflight.
+
+## Topic-selection handoff
+
+For new automatic discovery use `topic-editorial.md` and policy `editorial_v1`. The same scout collects observations; the coordinator shortlists, and the existing creator supplies the five compact directions/ratings in one bounded pass. No additional routine critic role. After selection, pass only the winner’s reader situation, opening question, answer/action, save/share use and official sources to the creator. Preserve that direction in the brief; do not restart five concepts. Existing content and visual review still apply. Read a supplied performance summary only as advisory context; no automatic weights or penalty for missing/low-sample data.

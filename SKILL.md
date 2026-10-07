@@ -53,6 +53,8 @@ Treat every local result as a draft. Never publish, upload, schedule, send, or o
 
 **Speech-bubble appearance (all content types and layouts):** Use the common `scripts/rendering.py` compositor: merge the rounded body and tail into one filled shape and draw only its outer outline. The body-to-tail join must remain open, with no internal horizontal border. Apply the composition and final-review checks in `references/visual-rules.md`.
 
+**Information card design:** For a newly planned information card, use the user-selected #01 taped memo skin: set `information_card.style: "taped_memo_v1"` and read `references/information-card-style.md`. It also governs new motion information overlays. Keep content-specific grouping and the explaining character; this design choice does not force a card into every scene. Absent style preserves historical cards.
+
 ## Route story modules (humor; optional for information)
 
 For a new episode or story rewrite, read `references/story-modules/router.md` first. Parse explicit module IDs in the request into `enable` and `disable` overrides, let disable win when the same ID appears in both, apply the router's mode and story signals, and read only the active module files. Never install or run the external GitHub projects cited by the modules.

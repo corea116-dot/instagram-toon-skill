@@ -193,3 +193,67 @@ def test_final_validation_detects_bad_card_composition(tmp_path, mutation):
     issues = _check_layout(episode, (len(script.panels), script.output_layout))
     assert issues
     assert any({"text": "differs", "small_font": "34px", "overlap": "overlap"}[mutation] in issue for issue in issues)
+
+
+def test_taped_memo_is_deterministic_and_stays_inside_card(tmp_path):
+    episode = card_episode(tmp_path)
+    payload = json.loads((episode / "script.json").read_text())
+    card = payload["panels"][0]["information_card"]
+    card["style"] = "taped_memo_v1"
+    card["shapes"] = []
+    card["texts"][0].update(x=50, y=470, width=600, height=180, role="label", accent="yellow")
+    card["texts"][1].update(x=50, y=790, width=600, height=200, role="emphasis", accent="mint")
+    panel = EpisodeScriptModel.model_validate(payload).panels[0]
+    raw = tmp_path / "plain.png"
+    Image.new("RGB", (1080, 1350), "pink").save(raw)
+    first, layouts = render_carousel(raw, panel, find_korean_font())
+    second, _ = render_carousel(raw, panel, find_korean_font())
+    assert first.tobytes() == second.tobytes()
+    colors = set(first.get_flattened_data())
+    assert (255, 253, 247) in colors  # cream paper
+    assert (223, 212, 183) in colors  # two tape strips
+    assert (240, 217, 157) in colors  # yellow label
+    assert (208, 225, 209) in colors  # mint emphasis marker
+    assert first.getpixel((19, 1000)) == (255, 192, 203)
+    assert first.getpixel((681, 1000)) == (255, 192, 203)
+    assert first.getpixel((900, 1000)) == (255, 192, 203)
+    assert [item.element_id for item in layouts if item.kind == "card"] == ["title", "value"]
+
+
+def test_card_style_change_preserves_fact_lock_but_invalidates_layout(tmp_path):
+    episode = card_episode(tmp_path)
+    brief, path = episode / "brief.json", episode / "script.json"
+    old_content, old_layout = semantic_content_sha256(brief, path), layout_sha256(path)
+    payload = json.loads(path.read_text())
+    card = payload["panels"][0]["information_card"]
+    card.update(style="taped_memo_v1")
+    card["texts"][1].update(role="emphasis", accent="yellow")
+    write_json(path, payload)
+    assert semantic_content_sha256(brief, path) == old_content
+    assert layout_sha256(path) != old_layout
+    assert content_review_issues(episode) == content_lock_issues(episode) == ()
+
+
+@pytest.mark.parametrize("mutation", ["no_style", "body_accent", "unknown_style"])
+def test_invalid_memo_style_contracts(tmp_path, mutation):
+    episode = card_episode(tmp_path)
+    payload = json.loads((episode / "script.json").read_text())
+    card = payload["panels"][0]["information_card"]
+    card["style"] = "taped_memo_v1"
+    if mutation == "no_style":
+        del card["style"]
+        card["texts"][0]["role"] = "label"
+    elif mutation == "body_accent":
+        card["texts"][0]["accent"] = "yellow"
+    else:
+        card["style"] = "unregistered"
+    with pytest.raises(ValidationError):
+        EpisodeScriptModel.model_validate(payload)
+
+
+def test_legacy_card_serialization_omits_new_style_defaults(tmp_path):
+    episode = card_episode(tmp_path)
+    script = EpisodeScriptModel.model_validate_json((episode / "script.json").read_text())
+    card = script.panels[0].information_card.model_dump(mode="json")
+    assert "style" not in card
+    assert all("role" not in text and "accent" not in text for text in card["texts"])

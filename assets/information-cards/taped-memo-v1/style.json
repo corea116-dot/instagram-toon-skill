@@ -1,0 +1,40 @@
+{
+  "id": "taped_memo_v1",
+  "name": "테이프 메모지",
+  "approved_sample": "01",
+  "version": 1,
+  "colors": {
+    "ink": "#292824",
+    "paper": "#FFFDF7",
+    "shadow": "#DED6C7",
+    "tape": "#DFD4B7",
+    "tape_lines": "#D5C18C",
+    "label_yellow": "#F0D99D",
+    "label_mint": "#D6E4D9",
+    "marker_yellow": "#F7DF9D",
+    "marker_mint": "#D0E1D1",
+    "divider": "#D5CFC2"
+  },
+  "fonts": {
+    "body": "assets/fonts/nanum-bareunhipi/NanumBaReunHiPi.ttf",
+    "label_and_emphasis": "assets/fonts/cafe24-ssurround/Cafe24Ssurround-v2.0.ttf"
+  },
+  "geometry": {
+    "stroke": 3,
+    "wobble": 2.4,
+    "seed": 101,
+    "tapes": [
+      [
+        0.081,
+        0.261,
+        0.004
+      ],
+      [
+        0.817,
+        0.947,
+        -0.004
+      ]
+    ]
+  },
+  "policy": "New information cards use an explicit style marker. Do not rewrite existing episodes. Keep content-specific grouping and same-panel presenter. Preview wording is an example, not reusable factual content."
+}

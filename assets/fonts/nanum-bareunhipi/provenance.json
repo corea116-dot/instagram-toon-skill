@@ -1,0 +1,22 @@
+{
+  "font": "나눔손글씨 바른히피",
+  "filename": "NanumBaReunHiPi.ttf",
+  "version": "1.000",
+  "copyright": "Copyright © 2019 NAVER Corporation. All rights reserved. Font created by CLOVA AI OCR Team.",
+  "license": "SIL Open Font License 1.1",
+  "font_url": "https://hangeul.naver.com/hangeul_static/webfont/clova/NanumBaReunHiPi.ttf",
+  "license_sources": [
+    "https://help.naver.com/service/30016/contents/18088?osType=PC&lang=ko",
+    "https://hangeul.naver.com/font"
+  ],
+  "source_local": "/Users/b./Documents/Codex/2026-10-07/task-3/fonts/NanumBaReunHiPi.ttf",
+  "source_task_thread": "01a114ad-c364-7561-9acc-2e03c54ad018",
+  "source_note": "Official download and license research supplied by prior task; local original reused without new web research. Copyright/version extracted from font name table.",
+  "sha256": "3669ecb9f3a607143d914e1f3926800a9df9ad8f81ed2530262120a9e758b4b0",
+  "modified": false,
+  "system_install": false,
+  "display_substitutions": {
+    "U+2026": "...",
+    "U+00B7": "/"
+  }
+}

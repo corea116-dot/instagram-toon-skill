@@ -72,5 +72,15 @@
   ],
   "reference_images": [
     "assets/references/styles"
-  ]
+  ],
+  "information_card_policy": {
+    "default_style": "taped_memo_v1",
+    "approved_sample": "01",
+    "reference_image": "assets/information-cards/taped-memo-v1/preview.png",
+    "tokens": "assets/information-cards/taped-memo-v1/style.json",
+    "rules_reference": "references/information-card-style.md",
+    "apply_to": "new information cards and newly planned motion information overlays",
+    "activation": "write information_card.style explicitly in new scripts; absent style preserves historical rendering",
+    "reference_use": "composition reference only; do not add lettered preview to generated-art style references"
+  }
 }

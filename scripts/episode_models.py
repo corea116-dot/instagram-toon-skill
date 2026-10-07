@@ -67,6 +67,8 @@ class CardTextModel(BoxModel):
     text: NonBlankString
     color: Annotated[str, Field(pattern=r"^#[0-9a-fA-F]{6}$")] = "#1b1f26"
     align: Literal["left", "center", "right"] = "left"
+    role: Literal["body", "label", "emphasis"] = Field(default="body", exclude_if=lambda value: value == "body")
+    accent: Literal["yellow", "mint"] | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class CardShapeModel(BoxModel):
@@ -88,9 +90,14 @@ class InformationCardModel(StrictModel):
     texts: Annotated[tuple[CardTextModel, ...], Field(min_length=1)]
     shapes: tuple[CardShapeModel, ...] = ()
     presenter: CardPresenterModel
+    style: Literal["taped_memo_v1"] | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def card_geometry(self) -> Self:
+        if self.style is None and any(text.role != "body" or text.accent is not None for text in self.texts):
+            raise ValueError("card text roles and accents require an explicit card style")
+        if any(text.role == "body" and text.accent is not None for text in self.texts):
+            raise ValueError("card accents belong to label or emphasis text")
         if len({text.id for text in self.texts}) != len(self.texts):
             raise ValueError("information card text IDs must be unique")
         if any(not box_contains(self.area, item) for item in (*self.texts, *self.shapes)):

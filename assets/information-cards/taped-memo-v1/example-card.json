@@ -1,0 +1,107 @@
+{
+  "format": "두 조건을 정리하는 메모",
+  "design_reason": "관련 조건과 예외를 같은 종이 안에 묶어 비교한다",
+  "style": "taped_memo_v1",
+  "area": {
+    "x": 40,
+    "y": 260,
+    "width": 1000,
+    "height": 660
+  },
+  "texts": [
+    {
+      "id": "basic-label",
+      "text": "기본",
+      "x": 100,
+      "y": 350,
+      "width": 158,
+      "height": 72,
+      "role": "label",
+      "accent": "yellow",
+      "align": "center",
+      "color": "#292824"
+    },
+    {
+      "id": "basic-prefix",
+      "text": "월",
+      "x": 330,
+      "y": 428,
+      "width": 66,
+      "height": 96,
+      "color": "#292824"
+    },
+    {
+      "id": "basic-number",
+      "text": "15회",
+      "x": 396,
+      "y": 428,
+      "width": 188,
+      "height": 112,
+      "role": "emphasis",
+      "accent": "yellow",
+      "color": "#292824"
+    },
+    {
+      "id": "basic-condition",
+      "text": "이상 이용",
+      "x": 584,
+      "y": 428,
+      "width": 330,
+      "height": 96,
+      "color": "#292824"
+    },
+    {
+      "id": "first-label",
+      "text": "가입 첫달",
+      "x": 100,
+      "y": 610,
+      "width": 250,
+      "height": 72,
+      "role": "label",
+      "accent": "mint",
+      "align": "center",
+      "color": "#292824"
+    },
+    {
+      "id": "first-number",
+      "text": "15회",
+      "x": 330,
+      "y": 688,
+      "width": 188,
+      "height": 112,
+      "role": "emphasis",
+      "accent": "mint",
+      "color": "#292824"
+    },
+    {
+      "id": "first-condition",
+      "text": "미만도 지급",
+      "x": 518,
+      "y": 688,
+      "width": 420,
+      "height": 96,
+      "color": "#292824"
+    }
+  ],
+  "shapes": [
+    {
+      "shape": "rectangle",
+      "x": 95,
+      "y": 575,
+      "width": 880,
+      "height": 2,
+      "fill": "#D5CFC2"
+    }
+  ],
+  "presenter": {
+    "character_id": "M01",
+    "area": {
+      "x": 230,
+      "y": 950,
+      "width": 620,
+      "height": 360
+    },
+    "pose": "종이에 정리한 두 조건을 가리키며 설명한다",
+    "explanation_bubble": 1
+  }
+}

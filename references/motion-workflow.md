@@ -52,6 +52,9 @@ Use word timestamps/ASR to find omitted words, cut syllables and caption drift, 
 
 ## 4. Compose and verify
 
+For newly planned information overlays, apply approved #01 taped memo from `information-card-style.md`, using its shared tokens and existing fonts as editable layers. Preserve content-specific grouping and meaningful timing; keep ordinary captions in their planned format. Do not retrofit an existing video just because this default changed.
+
+
 Reuse a suitable local renderer; load the Remotion skill when using Remotion. Keep timing deterministic and source-driven. Browser work follows the user's Aside policy; do not silently switch to Chrome. If a required rendering dependency conflicts with the allowed environment, use an available compatible route or explain the limitation before changing it. For voice-only revisions, preserve the picture and use FFmpeg to replace/mix audio without regenerating artwork or rendering unchanged video.
 
 Deliver H.264/AAC MP4 with `yuv420p` and fast-start metadata for broad mobile playback. Check resolution, duration, fps, full-file decode, caption timing, audio duration and clipping. Inspect hook, transitions, dense text, interactions and ending at mobile scale. The independent visual reviewer checks ordered rendered frames against the source identity and approved timeline; inspect playback when available for timing and movement. Sampled frames alone do not establish full playback quality.

@@ -356,6 +356,9 @@ Adjacent information panels must have different jobs, and combined visible non-s
 
 ### Optional information card in script 1.2
 
+New cards default to the approved #01 skin by explicitly setting `style: "taped_memo_v1"`. See `information-card-style.md` and `assets/information-cards/taped-memo-v1/example-card.json`. Optional text `role` is `body` (default), `label`, or `emphasis`; the last two select Cafe24 Ssurround instead of body handwriting. Optional `accent: "yellow" | "mint"` fills labels or highlights emphasis glyphs, and is invalid on `body`. Roles/accents require the style. Absent style and default roles are omitted from serialization, preserving historical card hashes. This is a visual skin, independent of the free `format` below.
+
+
 Default to character-led panels: omit `panel.information_card` or set it to null, including for short factual explanations with numbers/dates. Use it only when visual structure materially helps comprehension. In the human-readable script preview label every panel `캐릭터 중심` or `카드+캐릭터` with its reason; do not add an unsupported presentation field to script JSON. Existing action/camera and card design_reason carry the plan. No fixed ratio or alternation is required. `format` and `design_reason` are free nonblank strings, not a closed template catalogue. Design a table, calendar, comparison, sequence or another content-appropriate arrangement using arbitrary text boxes and shapes. All coordinates are absolute on the 1080x1350 panel.
 
 ```json
@@ -363,14 +366,13 @@ Default to character-led panels: omit `panel.information_card` or set it to null
   "information_card": {
     "format": "두 조건 비교",
     "design_reason": "서로 다른 조건을 같은 기준으로 나란히 보여 준다",
+    "style": "taped_memo_v1",
     "area": {"x": 54, "y": 380, "width": 972, "height": 480},
     "texts": [
       {"id": "left", "text": "첫 번째 조건", "x": 78, "y": 420, "width": 430, "height": 300, "align": "center", "color": "#292724"},
       {"id": "right", "text": "두 번째 조건", "x": 555, "y": 420, "width": 430, "height": 300, "align": "center", "color": "#292724"}
     ],
-    "shapes": [
-      {"shape": "rectangle", "x": 54, "y": 380, "width": 480, "height": 480, "fill": "#F7F1E6"}
-    ],
+    "shapes": [],
     "presenter": {
       "character_id": "bgoon",
       "area": {"x": 230, "y": 900, "width": 620, "height": 396},

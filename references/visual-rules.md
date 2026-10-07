@@ -1,5 +1,8 @@
 # Visual Rules
 
+When a new information card is useful, apply approved #01 `taped_memo_v1` from [information-card-style.md](information-card-style.md): cream paper, loose pen border, two small tape strips, yellow/mint labels and restrained number markers. Keep this skin separate from content structure and raw-art generation.
+
+
 ## Canvas and layout
 
 Export every final PNG at exactly 1080x1350 pixels in RGB or RGBA mode.

@@ -35,6 +35,9 @@ Total panel count is not a substitute for structure. Keep the user's requested l
 
 ### Choose character-led or character-and-card presentation
 
+For cards selected below, use the approved #01 taped memo skin and explicit `information_card.style: "taped_memo_v1"`; read `information-card-style.md` for text roles, tokens and safe margins. The skin does not change whether a card is needed or impose a fixed number of rows.
+
+
 Default to a character-led scene with expressive action, framing, essential props and dialogue, without an information card. Character-led includes solo action and interactions with other characters; it never requires solo-only staging. Use it for a question, situation, short explanation, distinction or reaction that changes understanding. A character-led panel must still contribute its recorded new information or necessary story transition; do not replace removed card information with empty reactions.
 
 Plan scene construction independently of card choice, using the scene policy in `visual-rules.md`. In existing `scene`, name the on-screen character IDs, place and situation; in `action`, state who acts or responds to whom. Use `background`, `props` and `camera` to describe necessary spatial context, object state, framing and room for text. In the script preview show this scene alongside the dialogue and card reason, not in a separate approval step or new JSON artifact. An episode cast is a roster, not an instruction to draw everyone in every panel. Register any needed supporting character in the existing character bible before executable generation; preserve each identity separately.

@@ -9,6 +9,7 @@ import tempfile
 from typing import Final
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
+from information_card_styles import draw_taped_memo, draw_memo_label, draw_memo_highlight, memo_font_path
 
 from episode_models import (
     BoxModel,
@@ -164,18 +165,32 @@ def render_carousel(
     if panel.information_card:
         card = panel.information_card
         area = card.area
-        draw.rounded_rectangle((area.x, area.y, area.x + area.width, area.y + area.height), radius=20, fill="white")
+        if card.style == "taped_memo_v1":
+            draw_taped_memo(draw, area)
+        else:
+            draw.rounded_rectangle((area.x, area.y, area.x + area.width, area.y + area.height), radius=20, fill="white")
         for shape in card.shapes:
             bounds = (shape.x, shape.y, shape.x + shape.width, shape.y + shape.height)
             getattr(draw, shape.shape)(bounds, fill=shape.fill)
         for index, text in enumerate(card.texts, start=1):
-            fitted = _fit_card_text(draw, font_path, text)
+            card_font_path = memo_font_path(text.role) if card.style == "taped_memo_v1" else font_path
+            if not card_font_path.is_file():
+                raise RenderError(f"required card font missing: {card_font_path}")
+            fitted = _fit_card_text(draw, card_font_path, text)
+            if card.style == "taped_memo_v1" and text.role == "label":
+                draw_memo_label(draw, text, text.accent or "yellow")
             text_y = fitted.box.y
             measurer = TextMeasurer(draw=draw, font=fitted.font)
             for line in fitted.lines:
                 remaining = text.width - 24 - ceil(measurer.width(line))
                 offset = 0 if text.align == "left" else remaining if text.align == "right" else remaining // 2
-                draw.text((text.x + 12 + offset, text_y), line, font=fitted.font, fill=text.color)
+                position = (text.x + 12 + offset, text_y)
+                if card.style == "taped_memo_v1":
+                    if text.role == "emphasis" and text.accent:
+                        draw_memo_highlight(draw, draw.textbbox(position, line, font=fitted.font, anchor="lt"), text.accent)
+                    draw.text(position, line, font=fitted.font, fill=text.color, anchor="lt")
+                else:
+                    draw.text(position, line, font=fitted.font, fill=text.color)
                 text_y += fitted.line_height
             layouts.append(LayoutEntryModel(panel=panel.panel, bubble=index, kind="card", element_id=text.id,
                 box=fitted.box, safe_area=BoxModel(x=text.x, y=text.y, width=text.width, height=text.height),
